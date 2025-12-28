@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html data-theme="">
-    <script>
+<script>
         var aiptag = aiptag || {};
         aiptag.cmd = aiptag.cmd || [];
         aiptag.cmd.display = aiptag.cmd.display || [];
@@ -713,7 +713,7 @@
         <script src="js/socket.io.js"></script>
         <script>
         // Minimal fixes to work with our server
-        (function() {
+  (function() {
           'use strict';
           
           // Stub aiptag to prevent errors
@@ -761,8 +761,8 @@
                       _parsedResponse = response;
                     }
                   } catch(e) {}
-                }
-                if (originalOnReadyStateChange) {
+          }
+          if (originalOnReadyStateChange) {
                   return originalOnReadyStateChange.apply(this, arguments);
                 }
               };
@@ -783,10 +783,13 @@
             return xhr;
           };
           
-          // Show loading screen on button clicks
+          // Track which button was clicked and show loading screen
           document.addEventListener('click', function(e) {
             const button = e.target.closest('.button-play, .button-create');
             if (button) {
+              // Store which button was clicked
+              window._isCreateButton = button.classList.contains('button-create');
+              
               const loadScreen = document.getElementById('load');
               if (loadScreen) {
                 loadScreen.style.display = 'block';
@@ -824,6 +827,12 @@
                 if (event === 'login' && data && window._lastApiRoomId) {
                   data.join = window._lastApiRoomId;
                   data.code = window._lastApiRoomId;
+                  
+                  // If Create Private Room button was clicked, set create flag
+                  if (window._isCreateButton) {
+                    data.create = 1;
+                    console.log('🔧 Setting create=1 for private room');
+                  }
                 }
                 return originalEmit.apply(this, arguments);
               };
@@ -862,13 +871,35 @@
                         const gameWrapper = document.querySelector('#game-wrapper');
                         
                         if (overlay && overlayContent && roomPanel && gameWrapper) {
+                          // Ensure game-canvas maintains full size
+                          const gameCanvas = document.querySelector('#game-canvas');
+                          if (gameCanvas) {
+                            gameCanvas.style.setProperty('width', '100%', 'important');
+                            gameCanvas.style.setProperty('height', '100%', 'important');
+                            gameCanvas.style.setProperty('display', 'flex', 'important');
+                          }
+                          
                           gameWrapper.classList.add('room');
+                          
+                          // Overlay should fill full canvas
                           overlay.classList.add('show');
                           overlay.style.setProperty('opacity', '1', 'important');
                           overlay.style.setProperty('pointer-events', 'all', 'important');
+                          overlay.style.setProperty('width', '100%', 'important');
+                          overlay.style.setProperty('height', '100%', 'important');
+                          overlay.style.setProperty('position', 'absolute', 'important');
+                          
+                          // Overlay content should fill full size
+                          overlayContent.style.setProperty('top', '0', 'important');
+                          overlayContent.style.setProperty('width', '100%', 'important');
+                          overlayContent.style.setProperty('height', '100%', 'important');
+                          overlayContent.style.setProperty('position', 'absolute', 'important');
+                          
+                          // Room panel should fill full size
                           roomPanel.classList.add('show');
                           roomPanel.style.setProperty('display', 'flex', 'important');
-                          overlayContent.style.setProperty('top', '0', 'important');
+                          roomPanel.style.setProperty('width', '100%', 'important');
+                          roomPanel.style.setProperty('height', '100%', 'important');
                           
                           // Set WAITING text
                           const gameWordDesc = document.querySelector('#game-word .description');
@@ -889,11 +920,11 @@
                 }
               });
               
-              return socket;
-            };
-          }
-        })();
-        </script>
+          return socket;
+      };
+    }
+})();
+</script>
         <script src="js/game.js"></script>
     </body>
 </html>
