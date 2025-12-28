@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test API Response</title>
+</head>
+<body>
+    <h1>Testing /api/play Response</h1>
+    <button onclick="testAPI()">Test API</button>
+    <pre id="output"></pre>
+    
+    <script>
+        async function testAPI() {
+            const output = document.getElementById('output');
+            output.textContent = 'Testing...\n';
+            
+            try {
+                const response = await fetch('/api/play', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    },
+                    body: 'lang=0'
+                });
+                
+                const data = await response.json();
+                output.textContent = 'Response:\n' + JSON.stringify(data, null, 2);
+                
+                if (data.success && data.data && data.roomId) {
+                    output.textContent += '\n\n✅ Response format is correct!';
+                    output.textContent += '\n  - data (URL): ' + data.data;
+                    output.textContent += '\n  - roomId: ' + data.roomId;
+                } else {
+                    output.textContent += '\n\n❌ Response format is incorrect!';
+                }
+            } catch(e) {
+                output.textContent = 'Error: ' + e.message;
+            }
+        }
+    </script>
+</body>
+</html>
+
