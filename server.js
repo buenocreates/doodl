@@ -107,10 +107,11 @@ const SETTINGS = {
 
 const GAME_STATE = {
   LOBBY: 7,
-  ROUND_START: 2,  // Client expects F = 2 (not K = 1 which shows "Game starting...")
-  DRAWING: 4,       // Client expects j = 4 (not 2)
-  ROUND_END: 5,
-  GAME_END: 6
+  ROUND_START: 2,  // F = 2: Shows "Round $"
+  WORD_CHOICE: 3,   // V = 3: Shows word choice to drawer, "choosing word" to others
+  DRAWING: 4,       // j = 4: Drawing phase
+  ROUND_END: 5,     // Z = 5: Round end
+  GAME_END: 6       // X = 6: Game end
 };
 
 const WORD_MODE = {
@@ -600,14 +601,14 @@ io.on('connection', (socket) => {
         break;
         
       case PACKET.WORD_CHOICE:
-        if (room.state === GAME_STATE.ROUND_START && room.currentDrawer === socket.id) {
+        if (room.state === GAME_STATE.WORD_CHOICE && room.currentDrawer === socket.id) {
           const wordIndex = Array.isArray(data.data) ? data.data[0] : data.data;
           const words = getRandomWords(
             room.settings[SETTINGS.LANG],
             room.settings[SETTINGS.WORDCOUNT],
             room.customWords
           );
-          if (words[wordIndex]) {
+          if (words[wordIndex] !== undefined) {
             room.currentWord = words[wordIndex];
             room.state = GAME_STATE.DRAWING;
             room.timer = room.settings[SETTINGS.DRAWTIME];
@@ -624,11 +625,11 @@ io.on('connection', (socket) => {
               startHintSystem(room);
             }
             
-            // Send state update
+            // Send DRAWING state to all players (j = 4)
             io.to(currentRoomId).emit('data', {
               id: PACKET.STATE,
               data: {
-                id: GAME_STATE.DRAWING,
+                id: GAME_STATE.DRAWING, // j = 4
                 time: room.timer,
                 data: {
                   id: room.currentDrawer,
@@ -838,26 +839,43 @@ io.on('connection', (socket) => {
       room.customWords
     );
     
-    room.state = GAME_STATE.ROUND_START;
+    room.state = GAME_STATE.WORD_CHOICE;
     
+    // Step 1: Send "Round X" to ALL players (F = 2, ROUND_START)
     io.to(room.id).emit('data', {
       id: PACKET.STATE,
       data: {
-        id: GAME_STATE.ROUND_START,
+        id: GAME_STATE.ROUND_START, // F = 2
         time: 0,
-        data: room.currentRound - 1
+        data: room.currentRound - 1  // Round number (0-indexed, client adds 1)
       }
     });
     
-    // Send word choice to drawer (STATE packet with ROUND_START and words)
+    // Step 2: Send word choice to DRAWER (V = 3, WORD_CHOICE with words)
     io.to(room.currentDrawer).emit('data', {
       id: PACKET.STATE,
       data: {
-        id: GAME_STATE.ROUND_START,
+        id: GAME_STATE.WORD_CHOICE, // V = 3
         time: 0,
         data: {
           words: words
         }
+      }
+    });
+    
+    // Step 3: Send "choosing word" message to OTHER players (V = 3, WORD_CHOICE without words)
+    room.players.forEach(player => {
+      if (player.id !== room.currentDrawer) {
+        io.to(player.id).emit('data', {
+          id: PACKET.STATE,
+          data: {
+            id: GAME_STATE.WORD_CHOICE, // V = 3
+            time: 0,
+            data: {
+              id: room.currentDrawer  // Drawer's ID (client shows "$ is choosing a word!")
+            }
+          }
+        });
       }
     });
   }
