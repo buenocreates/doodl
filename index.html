@@ -783,6 +783,20 @@
             return xhr;
           };
           
+          // Show loading screen on button clicks
+          document.addEventListener('click', function(e) {
+            const button = e.target.closest('.button-play, .button-create');
+            if (button) {
+              const loadScreen = document.getElementById('load');
+              if (loadScreen) {
+                loadScreen.style.display = 'block';
+                loadScreen.style.visibility = 'visible';
+                loadScreen.style.opacity = '1';
+                loadScreen.style.zIndex = '9999';
+              }
+            }
+          }, true);
+          
           // Patch Socket.IO to inject roomId
           const originalIo = window.io;
           if (originalIo) {
@@ -793,6 +807,16 @@
               } else if (typeof url !== 'string' || !url.match(/^https?:\/\//)) {
                 actualUrl = location.origin;
               }
+              
+              // Show loading screen when Socket.IO connects
+              const loadScreen = document.getElementById('load');
+              if (loadScreen) {
+                loadScreen.style.display = 'block';
+                loadScreen.style.visibility = 'visible';
+                loadScreen.style.opacity = '1';
+                loadScreen.style.zIndex = '9999';
+              }
+              
               const socket = originalIo.call(this, actualUrl, options);
               
               const originalEmit = socket.emit;
@@ -804,24 +828,63 @@
                 return originalEmit.apply(this, arguments);
               };
               
-              // Handle private room display
+              // Handle page transitions and private room display
               socket.on('data', function(data) {
-                if (data && data.id === 10 && data.data && data.data.type === 1) {
-                  const stateId = data.data.state && data.data.state.id;
-                  if (stateId === 7) {
+                if (data && data.id === 10) { // GAME_DATA packet
+                  // Hide loading screen
+                  setTimeout(function() {
+                    const loadScreen = document.getElementById('load');
+                    if (loadScreen) {
+                      loadScreen.style.display = 'none';
+                      loadScreen.style.visibility = 'hidden';
+                      loadScreen.style.opacity = '0';
+                    }
+                    
+                    // Transition to game screen
                     setTimeout(function() {
-                      const overlay = document.querySelector('#game-canvas .overlay');
-                      const overlayContent = document.querySelector('#game-canvas .overlay-content');
-                      const roomPanel = document.querySelector('#game-canvas .overlay-content .room');
-                      const gameWrapper = document.querySelector('#game-wrapper');
-                      
-                      if (overlay && overlayContent && roomPanel && gameWrapper) {
-                        gameWrapper.classList.add('room');
-                        overlay.classList.add('show');
-                        roomPanel.classList.add('show');
-                        overlayContent.style.top = '0';
+                      const home = document.getElementById('home');
+                      const game = document.getElementById('game');
+                      if (home && game) {
+                        home.style.cssText = 'display: none !important; visibility: hidden !important; opacity: 0 !important;';
+                        game.style.cssText = 'display: flex !important; visibility: visible !important; opacity: 1 !important;';
                       }
                     }, 100);
+                  }, 1200);
+                  
+                  // Handle private room display
+                  if (data.data && data.data.type === 1) {
+                    const stateId = data.data.state && data.data.state.id;
+                    if (stateId === 7) {
+                      setTimeout(function() {
+                        const overlay = document.querySelector('#game-canvas .overlay');
+                        const overlayContent = document.querySelector('#game-canvas .overlay-content');
+                        const roomPanel = document.querySelector('#game-canvas .overlay-content .room');
+                        const gameWrapper = document.querySelector('#game-wrapper');
+                        
+                        if (overlay && overlayContent && roomPanel && gameWrapper) {
+                          gameWrapper.classList.add('room');
+                          overlay.classList.add('show');
+                          overlay.style.setProperty('opacity', '1', 'important');
+                          overlay.style.setProperty('pointer-events', 'all', 'important');
+                          roomPanel.classList.add('show');
+                          roomPanel.style.setProperty('display', 'flex', 'important');
+                          overlayContent.style.setProperty('top', '0', 'important');
+                          
+                          // Set WAITING text
+                          const gameWordDesc = document.querySelector('#game-word .description');
+                          if (gameWordDesc) {
+                            gameWordDesc.textContent = 'WAITING';
+                            gameWordDesc.classList.add('waiting');
+                          }
+                          
+                          // Hide canvas and toolbar
+                          const canvas = document.querySelector('#game-canvas canvas');
+                          const toolbar = document.querySelector('#game-toolbar');
+                          if (canvas) canvas.style.setProperty('display', 'none', 'important');
+                          if (toolbar) toolbar.style.setProperty('visibility', 'hidden', 'important');
+                        }
+                      }, 1300);
+                    }
                   }
                 }
               });
