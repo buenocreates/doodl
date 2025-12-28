@@ -445,6 +445,7 @@ io.on('connection', (socket) => {
           timerInterval: null,
           hintInterval: null,
           hintIndex: 0,
+          wordChoiceTimer: null,
           isPublic: false
         };
         rooms.set(roomId, room);
@@ -475,6 +476,9 @@ io.on('connection', (socket) => {
         owner: socket.id,
         startTime: null,
         timerInterval: null,
+        hintInterval: null,
+        hintIndex: 0,
+        wordChoiceTimer: null,
         isPublic: create !== 1 && create !== '1'
       };
       rooms.set(roomId, room);
@@ -602,6 +606,12 @@ io.on('connection', (socket) => {
         
       case PACKET.WORD_CHOICE:
         if (room.state === GAME_STATE.WORD_CHOICE && room.currentDrawer === socket.id) {
+          // Clear word choice timer
+          if (room.wordChoiceTimer) {
+            clearInterval(room.wordChoiceTimer);
+            room.wordChoiceTimer = null;
+          }
+          
           const wordIndex = Array.isArray(data.data) ? data.data[0] : data.data;
           const words = getRandomWords(
             room.settings[SETTINGS.LANG],
@@ -617,7 +627,7 @@ io.on('connection', (socket) => {
             room.hintIndex = 0;
             room.hintInterval = null;
             
-            // Start timer
+            // Start drawing timer
             startRoundTimer(room);
             
             // Start hint system if hints are enabled
@@ -625,20 +635,40 @@ io.on('connection', (socket) => {
               startHintSystem(room);
             }
             
-            // Send DRAWING state to all players (j = 4)
-            io.to(currentRoomId).emit('data', {
-              id: PACKET.STATE,
+          // Send DRAWING state - drawer gets word, others don't
+          // Send to drawer with word
+          io.to(room.currentDrawer).emit('data', {
+            id: PACKET.STATE,
+            data: {
+              id: GAME_STATE.DRAWING, // j = 4
+              time: room.timer,
               data: {
-                id: GAME_STATE.DRAWING, // j = 4
-                time: room.timer,
-                data: {
-                  id: room.currentDrawer,
-                  word: room.currentDrawer === socket.id ? room.currentWord : undefined,
-                  hints: [],
-                  drawCommands: []
-                }
+                id: room.currentDrawer,
+                word: room.currentWord, // Drawer sees the word
+                hints: [],
+                drawCommands: []
               }
-            });
+            }
+          });
+          
+          // Send to other players without word
+          room.players.forEach(player => {
+            if (player.id !== room.currentDrawer) {
+              io.to(player.id).emit('data', {
+                id: PACKET.STATE,
+                data: {
+                  id: GAME_STATE.DRAWING, // j = 4
+                  time: room.timer,
+                  data: {
+                    id: room.currentDrawer,
+                    word: undefined, // Others don't see the word
+                    hints: [],
+                    drawCommands: []
+                  }
+                }
+              });
+            }
+          });
           }
         }
         break;
@@ -697,14 +727,15 @@ io.on('connection', (socket) => {
               endRound(room, 0); // Everyone guessed
             }
           } else {
-            // Check if close (simple check - same length or similar)
-            const similarity = calculateSimilarity(guess, word);
-            if (similarity > 0.7) {
-              socket.emit('data', {
-                id: PACKET.CLOSE,
-                data: guess
-              });
-            }
+          // Check if close guess (Levenshtein distance)
+          const similarity = calculateSimilarity(guess, word);
+          // Use a lower threshold (0.6) to be more lenient with close guesses
+          if (similarity >= 0.6 && similarity < 1.0) {
+            socket.emit('data', {
+              id: PACKET.CLOSE,
+              data: guess
+            });
+          }
           }
         }
         break;
@@ -840,6 +871,7 @@ io.on('connection', (socket) => {
     );
     
     room.state = GAME_STATE.WORD_CHOICE;
+    room.timer = 4; // 4 second timer for word choice (matches client eo = 4)
     
     // Step 1: Send "Round X" to ALL players (F = 2, ROUND_START)
     io.to(room.id).emit('data', {
@@ -851,26 +883,26 @@ io.on('connection', (socket) => {
       }
     });
     
-    // Step 2: Send word choice to DRAWER (V = 3, WORD_CHOICE with words)
+    // Step 2: Send word choice to DRAWER (V = 3, WORD_CHOICE with words and timer)
     io.to(room.currentDrawer).emit('data', {
       id: PACKET.STATE,
       data: {
         id: GAME_STATE.WORD_CHOICE, // V = 3
-        time: 0,
+        time: room.timer, // 4 seconds for word choice
         data: {
           words: words
         }
       }
     });
     
-    // Step 3: Send "choosing word" message to OTHER players (V = 3, WORD_CHOICE without words)
+    // Step 3: Send "choosing word" message to OTHER players (V = 3, WORD_CHOICE without words, with timer)
     room.players.forEach(player => {
       if (player.id !== room.currentDrawer) {
         io.to(player.id).emit('data', {
           id: PACKET.STATE,
           data: {
             id: GAME_STATE.WORD_CHOICE, // V = 3
-            time: 0,
+            time: room.timer, // 4 seconds timer
             data: {
               id: room.currentDrawer  // Drawer's ID (client shows "$ is choosing a word!")
             }
@@ -878,6 +910,79 @@ io.on('connection', (socket) => {
         });
       }
     });
+    
+    // Start word choice timer (4 seconds)
+    if (room.wordChoiceTimer) {
+      clearInterval(room.wordChoiceTimer);
+    }
+    room.wordChoiceTimer = setInterval(() => {
+      room.timer--;
+      
+      // Send timer update to all players
+      io.to(room.id).emit('data', {
+        id: PACKET.TIMER,
+        data: room.timer
+      });
+      
+      if (room.timer <= 0) {
+        // Time's up - auto-select first word
+        clearInterval(room.wordChoiceTimer);
+        room.wordChoiceTimer = null;
+        
+        if (words.length > 0) {
+          room.currentWord = words[0];
+          room.state = GAME_STATE.DRAWING;
+          room.timer = room.settings[SETTINGS.DRAWTIME];
+          room.startTime = Date.now();
+          room.drawCommands = [];
+          room.hintIndex = 0;
+          room.hintInterval = null;
+          
+          // Start drawing timer
+          startRoundTimer(room);
+          
+          // Start hint system if hints are enabled
+          if (room.settings[SETTINGS.HINTCOUNT] > 0) {
+            startHintSystem(room);
+          }
+          
+          // Send DRAWING state - drawer gets word, others don't
+          // Send to drawer with word
+          io.to(room.currentDrawer).emit('data', {
+            id: PACKET.STATE,
+            data: {
+              id: GAME_STATE.DRAWING, // j = 4
+              time: room.timer,
+              data: {
+                id: room.currentDrawer,
+                word: room.currentWord, // Drawer sees the word
+                hints: [],
+                drawCommands: []
+              }
+            }
+          });
+          
+          // Send to other players without word
+          room.players.forEach(player => {
+            if (player.id !== room.currentDrawer) {
+              io.to(player.id).emit('data', {
+                id: PACKET.STATE,
+                data: {
+                  id: GAME_STATE.DRAWING, // j = 4
+                  time: room.timer,
+                  data: {
+                    id: room.currentDrawer,
+                    word: undefined, // Others don't see the word
+                    hints: [],
+                    drawCommands: []
+                  }
+                }
+              });
+            }
+          });
+        }
+      }
+    }, 1000);
   }
   
   function startRoundTimer(room) {
@@ -947,6 +1052,11 @@ io.on('connection', (socket) => {
     if (room.hintInterval) {
       clearInterval(room.hintInterval);
       room.hintInterval = null;
+    }
+    
+    if (room.wordChoiceTimer) {
+      clearInterval(room.wordChoiceTimer);
+      room.wordChoiceTimer = null;
     }
     
     room.state = GAME_STATE.ROUND_END;
