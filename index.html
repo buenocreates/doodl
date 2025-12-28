@@ -817,15 +817,28 @@
           if (originalIo) {
             window.io = function(url, options) {
               let actualUrl = url;
+              
+              // Handle different URL formats
               if (typeof url === 'object' && url !== null && url.data) {
                 actualUrl = url.data;
               } else if (typeof url !== 'string' || !url.match(/^https?:\/\//)) {
                 actualUrl = location.origin;
               }
               
-              // Fix double slashes and ensure HTTPS uses WSS
-              actualUrl = actualUrl.replace(/\/\/+/g, '/'); // Remove double slashes
-              actualUrl = actualUrl.replace(/^http:\/\//, 'https://'); // Force HTTPS on Render
+              // Always use current page's origin on Render (simplest approach)
+              if (location.hostname && location.hostname.includes('onrender.com')) {
+                actualUrl = location.origin; // Use current page's origin (already HTTPS)
+              } else {
+                // For localhost, use the URL as-is but fix malformed ones
+                if (location.protocol === 'https:') {
+                  actualUrl = actualUrl.replace(/^http:\/\//, 'https://');
+                }
+                // Fix malformed URLs (http:/ or https:/)
+                actualUrl = actualUrl.replace(/^(https?):\/([^/])/, '$1://$2');
+              }
+              
+              // Remove trailing slashes
+              actualUrl = actualUrl.replace(/\/$/, '');
               
               // Ensure options object exists
               if (!options) {

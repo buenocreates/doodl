@@ -30,11 +30,10 @@ app.use(express.static(__dirname, {
   index: false // Don't serve index.html as directory index
 }));
 
-// Handle audio files - return minimal valid OGG to prevent encoding errors
+// Handle audio files - return 204 No Content to prevent encoding errors
 app.get('/audio/*', (req, res) => {
-  // Return minimal valid OGG file to prevent "Unable to decode audio data" error
-  res.setHeader('Content-Type', 'audio/ogg');
-  res.status(200).send(Buffer.from([0x4F, 0x67, 0x67, 0x53]));
+  // Return 204 No Content instead of empty body to prevent "Unable to decode audio data" error
+  res.status(204).end();
 });
 
 // Serve favicon
@@ -323,12 +322,14 @@ app.post('/api/play', (req, res) => {
     }
     
     // Return response in format game.js expects
-    // IMPORTANT: na() function expects URL as first param, but game.js passes data as first param
-    // So we return location.origin as data, and store roomId in a way that Socket.IO can access it
-    // Actually, looking at game.js, it uses e.data as the room ID in Socket.IO login
-    // So we need to return the URL for na(), but the room ID needs to be accessible
-    // Solution: Return URL as data, roomId as roomId property
-    const responseUrl = req.protocol + '://' + req.get('host');
+    // IMPORTANT: Always return HTTPS URL on Render (even if request was HTTP)
+    let responseUrl = req.protocol + '://' + req.get('host');
+    
+    // Force HTTPS on Render (check if host contains onrender.com)
+    if (req.get('host') && req.get('host').includes('onrender.com')) {
+      responseUrl = 'https://' + req.get('host');
+    }
+    
     console.log('✅ /api/play response:', { success: true, data: responseUrl, roomId: roomId, isPrivate });
     res.json({
       success: true,
