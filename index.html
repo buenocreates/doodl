@@ -750,19 +750,31 @@
             xhr.send = function() {
               const originalOnReadyStateChange = xhr.onreadystatechange;
               xhr.onreadystatechange = function() {
-                if (this.readyState === 4 && this.status === 200 && _requestUrl && _requestUrl.includes('/api/play')) {
-                  try {
-                    const response = JSON.parse(this.responseText);
-                    if (response.success) {
-                      window._lastApiRoomId = response.roomId;
-                      if (!response.data || typeof response.data !== 'string') {
-                        response.data = location.origin;
+                if (this.readyState === 4 && _requestUrl && _requestUrl.includes('/api/play')) {
+                  if (this.status === 200) {
+                    try {
+                      const response = JSON.parse(this.responseText);
+                      console.log('📥 API response:', response);
+                      if (response.success) {
+                        window._lastApiRoomId = response.roomId;
+                        console.log('📦 Stored roomId:', response.roomId);
+                        if (!response.data || typeof response.data !== 'string') {
+                          response.data = location.origin;
+                        }
+                        _parsedResponse = response;
                       }
-                      _parsedResponse = response;
+                    } catch(e) {
+                      console.error('❌ Error parsing API response:', e);
                     }
-                  } catch(e) {}
-          }
-          if (originalOnReadyStateChange) {
+                  } else {
+                    console.error('❌ API request failed:', this.status, this.statusText);
+                    const loadScreen = document.getElementById('load');
+                    if (loadScreen) {
+                      loadScreen.style.display = 'none';
+                    }
+                  }
+                }
+                if (originalOnReadyStateChange) {
                   return originalOnReadyStateChange.apply(this, arguments);
                 }
               };
@@ -822,6 +834,49 @@
               
               const socket = originalIo.call(this, actualUrl, options);
               
+              // Make socket globally available for game.js
+              window.S = socket;
+              window.socket = socket;
+              
+              // Track if GAME_DATA was received
+              let gameDataReceived = false;
+              
+              // Fallback: Force transition after 5 seconds if no GAME_DATA
+              const fallbackTimeout = setTimeout(function() {
+                if (!gameDataReceived) {
+                  console.warn('⚠️ No GAME_DATA received after 5s - forcing transition');
+                  const loadScreen = document.getElementById('load');
+                  if (loadScreen) {
+                    loadScreen.style.display = 'none';
+                    loadScreen.style.visibility = 'hidden';
+                    loadScreen.style.opacity = '0';
+                  }
+                  const home = document.getElementById('home');
+                  const game = document.getElementById('game');
+                  if (home && game) {
+                    home.style.cssText = 'display: none !important; visibility: hidden !important; opacity: 0 !important;';
+                    game.style.cssText = 'display: flex !important; visibility: visible !important; opacity: 1 !important;';
+                  }
+                }
+              }, 5000);
+              
+              // Log connection events
+              socket.on('connect', function() {
+                console.log('✅ Socket.IO connected on Render');
+              });
+              
+              socket.on('connect_error', function(error) {
+                console.error('❌ Socket.IO connection error:', error);
+                const loadScreen = document.getElementById('load');
+                if (loadScreen) {
+                  loadScreen.style.display = 'none';
+                }
+              });
+              
+              socket.on('disconnect', function() {
+                console.log('❌ Socket.IO disconnected');
+              });
+              
               const originalEmit = socket.emit;
               socket.emit = function(event, data) {
                 if (event === 'login' && data && window._lastApiRoomId) {
@@ -833,13 +888,19 @@
                     data.create = 1;
                     console.log('🔧 Setting create=1 for private room');
                   }
+                  console.log('📤 Emitting login:', { join: data.join, create: data.create, name: data.name });
                 }
                 return originalEmit.apply(this, arguments);
               };
               
               // Handle page transitions and private room display
               socket.on('data', function(data) {
+                console.log('📡 Socket data received:', data);
                 if (data && data.id === 10) { // GAME_DATA packet
+                  gameDataReceived = true;
+                  clearTimeout(fallbackTimeout);
+                  console.log('✅ GAME_DATA received, transitioning...');
+                  
                   // Hide loading screen
                   setTimeout(function() {
                     const loadScreen = document.getElementById('load');
@@ -856,6 +917,7 @@
                       if (home && game) {
                         home.style.cssText = 'display: none !important; visibility: hidden !important; opacity: 0 !important;';
                         game.style.cssText = 'display: flex !important; visibility: visible !important; opacity: 1 !important;';
+                        console.log('✅ Page transition complete');
                       }
                     }, 100);
                   }, 1200);
