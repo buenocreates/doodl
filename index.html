@@ -796,10 +796,10 @@
                 }
                 if (originalOnReadyStateChange) {
                   return originalOnReadyStateChange.apply(this, arguments);
-                }
-              };
+          }
+        };
               return originalSend.apply(this, arguments);
-            };
+    };
             
             Object.defineProperty(xhr, 'response', {
               get: function() {
@@ -814,7 +814,7 @@
             
             return xhr;
           };
-          
+      
           // Track which button was clicked and show loading screen
           document.addEventListener('click', function(e) {
             const button = e.target.closest('.button-play, .button-create');
@@ -872,8 +872,8 @@
               if (location.protocol === 'https:') {
                 options.secure = true;
                 options.transports = ['websocket', 'polling'];
-              }
-              
+      }
+      
               console.log('🔌 Connecting Socket.IO to:', actualUrl, 'with options:', options);
               
               // Show loading screen when Socket.IO connects
@@ -909,7 +909,7 @@
                   if (home && game) {
                     home.style.cssText = 'display: none !important; visibility: hidden !important; opacity: 0 !important;';
                     game.style.cssText = 'display: flex !important; visibility: visible !important; opacity: 1 !important;';
-                  }
+            }
                 }
               }, 10000);
               
@@ -942,7 +942,7 @@
                     console.log('🔧 Setting create=1 for private room');
                   }
                   console.log('📤 Emitting login:', { join: data.join, create: data.create, name: data.name });
-                }
+      }
                 return originalEmit.apply(this, arguments);
               };
               
@@ -977,7 +977,7 @@
                   if (data.data && data.data.code) {
                     window._roomCode = data.data.code;
                     console.log('🔗 Room code received:', data.data.code);
-                    
+  
                     // Patch the invite button to use our room code
                     setTimeout(function() {
                       const inviteBtn = document.querySelector('#button-invite');
@@ -1065,8 +1065,8 @@
         xhr.onreadystatechange = function() {
           if (this.readyState === 4) {
             if (this.status === 200) {
-              try {
-                const response = JSON.parse(this.responseText);
+          try {
+            const response = JSON.parse(this.responseText);
                 console.log('✅ Auto-join API response:', response);
                 
                 if (response.success && response.roomId) {
@@ -1082,7 +1082,7 @@
                   // Make socket globally available
                   window.S = socket;
                   window.socket = socket;
-                  
+  
                   // Wait for connection, then emit login
                   socket.on('connect', function() {
                     console.log('✅ Socket.IO connected for auto-join');
@@ -1132,7 +1132,7 @@
                         if (home && game) {
                           home.style.cssText = 'display: none !important; visibility: hidden !important; opacity: 0 !important;';
                           game.style.cssText = 'display: flex !important; visibility: visible !important; opacity: 1 !important;';
-                        }
+            }
                       }, 800);
                     }
                   });
@@ -1142,7 +1142,7 @@
                 const loadScreen = document.getElementById('load');
                 if (loadScreen) {
                   loadScreen.style.display = 'none';
-                }
+        }
               }
             } else {
               console.error('❌ Auto-join API failed:', this.status);

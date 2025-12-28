@@ -142,6 +142,9 @@ const PACKET = {
   CLEAR: 20,
   UNDO: 21,
   CUSTOM_WORDS: 22,
+  CHAT: 30,
+  SPAM: 31,
+  ERROR: 32,
   KICK: 3,
   BAN: 4
 };
@@ -308,6 +311,8 @@ app.post('/api/play', (req, res) => {
           owner: null,
           startTime: null,
           timerInterval: null,
+          hintInterval: null,
+          hintIndex: 0,
           isPublic: true
         };
         publicRooms.set(roomId, publicRoom);
@@ -332,6 +337,8 @@ app.post('/api/play', (req, res) => {
           owner: null,
           startTime: null,
           timerInterval: null,
+          hintInterval: null,
+          hintIndex: 0,
           isPublic: true
         };
         rooms.set(roomId, newRoom);
@@ -424,6 +431,8 @@ io.on('connection', (socket) => {
           owner: null,
           startTime: null,
           timerInterval: null,
+          hintInterval: null,
+          hintIndex: 0,
           isPublic: false
         };
         rooms.set(roomId, room);
@@ -593,9 +602,16 @@ io.on('connection', (socket) => {
             room.timer = room.settings[SETTINGS.DRAWTIME];
             room.startTime = Date.now();
             room.drawCommands = [];
+            room.hintIndex = 0;
+            room.hintInterval = null;
             
             // Start timer
             startRoundTimer(room);
+            
+            // Start hint system if hints are enabled
+            if (room.settings[SETTINGS.HINTCOUNT] > 0) {
+              startHintSystem(room);
+            }
             
             // Send state update
             io.to(currentRoomId).emit('data', {
@@ -605,7 +621,7 @@ io.on('connection', (socket) => {
                 time: room.timer,
                 data: {
                   id: room.currentDrawer,
-                  word: room.currentWord,
+                  word: room.currentDrawer === socket.id ? room.currentWord : undefined,
                   hints: [],
                   drawCommands: []
                 }
@@ -688,6 +704,29 @@ io.on('connection', (socket) => {
             data: {
               id: socket.id,
               vote: data.data
+            }
+          });
+        }
+        break;
+        
+      case PACKET.CHAT:
+        // Handle chat messages (packet id 30)
+        if (room.state === GAME_STATE.DRAWING && socket.id !== room.currentDrawer) {
+          // Regular chat during drawing
+          io.to(currentRoomId).emit('data', {
+            id: PACKET.CHAT,
+            data: {
+              id: socket.id,
+              msg: data.data
+            }
+          });
+        } else if (room.state === GAME_STATE.LOBBY) {
+          // Chat in lobby
+          io.to(currentRoomId).emit('data', {
+            id: PACKET.CHAT,
+            data: {
+              id: socket.id,
+              msg: data.data
             }
           });
         }
@@ -799,11 +838,15 @@ io.on('connection', (socket) => {
       }
     });
     
-    // Send word choice to drawer
+    // Send word choice to drawer (STATE packet with ROUND_START and words)
     io.to(room.currentDrawer).emit('data', {
-      id: GAME_STATE.ROUND_START,
+      id: PACKET.STATE,
       data: {
-        words: words
+        id: GAME_STATE.ROUND_START,
+        time: 0,
+        data: {
+          words: words
+        }
       }
     });
   }
@@ -827,10 +870,54 @@ io.on('connection', (socket) => {
     }, 1000);
   }
   
+  function startHintSystem(room) {
+    if (room.hintInterval) {
+      clearInterval(room.hintInterval);
+    }
+    
+    const hintCount = room.settings[SETTINGS.HINTCOUNT];
+    const word = room.currentWord;
+    const totalTime = room.settings[SETTINGS.DRAWTIME];
+    const hintInterval = Math.floor(totalTime / (hintCount + 1));
+    
+    room.hintIndex = 0;
+    const revealedIndices = new Set();
+    
+    room.hintInterval = setInterval(() => {
+      if (room.hintIndex >= hintCount || room.state !== GAME_STATE.DRAWING) {
+        clearInterval(room.hintInterval);
+        room.hintInterval = null;
+        return;
+      }
+      
+      // Find a random unrevealed letter
+      let index;
+      do {
+        index = Math.floor(Math.random() * word.length);
+      } while (revealedIndices.has(index) && revealedIndices.size < word.length);
+      
+      revealedIndices.add(index);
+      const character = word.charAt(index);
+      
+      // Send hint to all non-drawers
+      io.to(room.id).emit('data', {
+        id: PACKET.HINTS,
+        data: [[index, character]]
+      });
+      
+      room.hintIndex++;
+    }, hintInterval * 1000);
+  }
+  
   function endRound(room, reason) {
     if (room.timerInterval) {
       clearInterval(room.timerInterval);
       room.timerInterval = null;
+    }
+    
+    if (room.hintInterval) {
+      clearInterval(room.hintInterval);
+      room.hintInterval = null;
     }
     
     room.state = GAME_STATE.ROUND_END;
