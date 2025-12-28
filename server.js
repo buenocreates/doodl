@@ -12,6 +12,7 @@ const io = new Server(server, {
     methods: ["GET", "POST"],
     credentials: true
   },
+  path: '/socket.io/',
   transports: ['websocket', 'polling'],
   allowEIO3: true,
   pingTimeout: 60000,
@@ -23,18 +24,13 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Serve static files FIRST (CSS, JS, images, etc.) - MUST be before other routes
+// Audio files are now valid OGG files, so they can be served as static files
 app.use(express.static(__dirname, {
   maxAge: '1d',
   etag: true,
   lastModified: true,
   index: false // Don't serve index.html as directory index
 }));
-
-// Handle audio files - return 204 No Content to prevent encoding errors
-app.get('/audio/*', (req, res) => {
-  // Return 204 No Content instead of empty body to prevent "Unable to decode audio data" error
-  res.status(204).end();
-});
 
 // Serve favicon
 app.get('/favicon.png', (req, res) => {

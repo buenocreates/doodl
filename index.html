@@ -845,6 +845,9 @@
                 options = {};
               }
               
+              // CRITICAL: Set explicit path to prevent double slashes
+              options.path = '/socket.io/';
+              
               // Force secure transport on HTTPS
               if (location.protocol === 'https:') {
                 options.secure = true;
