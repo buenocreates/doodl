@@ -237,7 +237,7 @@ app.post('/api/play', (req, res) => {
     // - If only lang: create/join public room (Socket.IO will handle create flag)
     
     // Check for room code in query (for invite links like ?UsCN6Pnv)
-    const roomCode = req.query.room || Object.keys(req.query).find(key => key.length === 8 && /^[A-Za-z0-9]+$/.test(key));
+    // roomCode was already declared above, so use it here
     if (roomCode && !roomId) {
       const codeRoomId = roomCodes.get(roomCode);
       if (codeRoomId && rooms.has(codeRoomId)) {

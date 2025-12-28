@@ -9,6 +9,7 @@
             console.log('🔗 Room code detected in URL:', roomCode);
             window._roomCodeFromUrl = roomCode;
             window._joinRoomCode = roomCode;
+            window._autoJoinRoomCode = roomCode; // Flag to auto-join
           }
         })();
         
@@ -1031,6 +1032,133 @@
           return socket;
       };
     }
+})();
+
+// Auto-join room when room code is in URL
+(function() {
+  if (window._autoJoinRoomCode) {
+    // Wait for page to fully load and game.js to initialize
+    window.addEventListener('load', function() {
+      setTimeout(function() {
+        console.log('🔗 Auto-joining room with code:', window._autoJoinRoomCode);
+        
+        // Show loading screen
+        const loadScreen = document.getElementById('load');
+        if (loadScreen) {
+          loadScreen.style.display = 'block';
+          loadScreen.style.visibility = 'visible';
+          loadScreen.style.opacity = '1';
+          loadScreen.style.zIndex = '9999';
+        }
+        
+        // Get player name and language from inputs
+        const nameInput = document.querySelector('.input-name');
+        const langSelect = document.querySelector('.container-name-lang select');
+        const name = nameInput ? nameInput.value || 'Player' : 'Player';
+        const lang = langSelect ? parseInt(langSelect.value) || 0 : 0;
+        
+        // Make API call to join room
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', '/api/play', true);
+        xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+        
+        xhr.onreadystatechange = function() {
+          if (this.readyState === 4) {
+            if (this.status === 200) {
+              try {
+                const response = JSON.parse(this.responseText);
+                console.log('✅ Auto-join API response:', response);
+                
+                if (response.success && response.roomId) {
+                  window._lastApiRoomId = response.roomId;
+                  
+                  // Connect Socket.IO and join room
+                  const socket = window.io(location.origin, {
+                    path: '/socket.io/',
+                    transports: ['websocket', 'polling'],
+                    secure: location.protocol === 'https:'
+                  });
+                  
+                  // Make socket globally available
+                  window.S = socket;
+                  window.socket = socket;
+                  
+                  // Wait for connection, then emit login
+                  socket.on('connect', function() {
+                    console.log('✅ Socket.IO connected for auto-join');
+                    
+                    // Get avatar from game state
+                    const avatar = window.game && window.game.avatar ? window.game.avatar : [0, 0, 0, -1];
+                    
+                    // Emit login with room code
+                    socket.emit('login', {
+                      join: response.roomId,
+                      code: response.roomId,
+                      name: name,
+                      lang: lang,
+                      avatar: avatar
+                    });
+                    
+                    console.log('📤 Auto-join login emitted:', {
+                      join: response.roomId,
+                      name: name,
+                      lang: lang
+                    });
+                  });
+                  
+                  socket.on('connect_error', function(error) {
+                    console.error('❌ Socket.IO connection error:', error);
+                    const loadScreen = document.getElementById('load');
+                    if (loadScreen) {
+                      loadScreen.style.display = 'none';
+                    }
+                  });
+                  
+                  // Handle GAME_DATA to transition to game screen
+                  socket.on('data', function(data) {
+                    if (data && data.id === 10) { // GAME_DATA
+                      console.log('✅ GAME_DATA received for auto-join');
+                      
+                      setTimeout(function() {
+                        const loadScreen = document.getElementById('load');
+                        if (loadScreen) {
+                          loadScreen.style.display = 'none';
+                          loadScreen.style.visibility = 'hidden';
+                          loadScreen.style.opacity = '0';
+                        }
+                        
+                        const home = document.getElementById('home');
+                        const game = document.getElementById('game');
+                        if (home && game) {
+                          home.style.cssText = 'display: none !important; visibility: hidden !important; opacity: 0 !important;';
+                          game.style.cssText = 'display: flex !important; visibility: visible !important; opacity: 1 !important;';
+                        }
+                      }, 800);
+                    }
+                  });
+                }
+              } catch(e) {
+                console.error('❌ Error parsing auto-join response:', e);
+                const loadScreen = document.getElementById('load');
+                if (loadScreen) {
+                  loadScreen.style.display = 'none';
+                }
+              }
+            } else {
+              console.error('❌ Auto-join API failed:', this.status);
+              const loadScreen = document.getElementById('load');
+              if (loadScreen) {
+                loadScreen.style.display = 'none';
+              }
+            }
+          }
+        };
+        
+        // Send request with room code
+        xhr.send('roomCode=' + encodeURIComponent(window._autoJoinRoomCode) + '&lang=' + lang);
+      }, 1000); // Wait 1 second for game.js to initialize
+    });
+  }
 })();
 </script>
         <script src="js/game.js"></script>
