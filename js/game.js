@@ -246,12 +246,7 @@
     }
     function qe(e, t) {
         m.style.display = "block";
-        for (var n = 0; n < g.length; n++)
-            g[n] && (g[n].style.display = "none");
-        if (!g[e]) {
-            console.error("Modal container not found for index", e, "g array:", g, "m:", m);
-            return;
-        }
+        for (var n = 0; n < g.length; n++) g[n].style.display = "none";
         g[e].style.display = "flex";
         var a = g[e];
         switch (e) {
@@ -265,14 +260,10 @@
             break;
         case s:
             ke.textContent = t.id == x ? E("$ (You)", t.name) : t.name;
-            var o = (W(x) ? (W(x).flags & k) == k : !1)
+            var o = (W(x).flags & k) == k
               , r = (t.flags & k) == k
-              , i = a.querySelector(".buttons");
-            if (!i) {
-                console.error("Buttons container not found in modal-container-player");
-                break;
-            }
-            var n = x == En  // Current player is owner
+              , i = a.querySelector(".buttons")
+              , n = x == En  // Current player is owner
               , l = (In !== void 0 && In !== null && In !== -1) ? In : !0  // Default to public if In not set (for backwards compat)
               , u = i.querySelector(".button-pair");  // Kick/Ban buttons
             // Show/hide buttons based on context (like official skribbl.io but with public/private logic):
@@ -283,25 +274,20 @@
             // Hide buttons if clicking yourself or target is admin
             i.style.display = (t.id == x || r) ? "none" : "flex";
             // Show Kick/Ban pair only in private rooms AND if you're the owner (not in public rooms)
-            if (u) u.style.display = (!l && n) ? "flex" : "none";
+            u.style.display = (!l && n) ? "flex" : "none";
             // Hide report button if already reported
-            var reportBtn = i.querySelector("button.report");
-            if (reportBtn) reportBtn.style.display = t.reported ? "none" : "";
+            i.querySelector("button.report").style.display = t.reported ? "none" : "";
             Ce(t.muted);
-            var reportMenu = a.querySelector(".report-menu");
-            if (reportMenu) reportMenu.style.display = "none";
+            a.querySelector(".report-menu").style.display = "none";
             // Show invite only if clicking yourself
-            var inviteEl = a.querySelector(".invite");
-            if (inviteEl) inviteEl.style.display = (x == t.id) ? "flex" : "none";
+            a.querySelector(".invite").style.display = (x == t.id) ? "flex" : "none";
             r = we.querySelector(".player");
-            if (r) {
-                o = (r.style.display = "",
-                ce(r),
-                de(t.avatar));
-                he(o, En == t.id),
-                pe(o, Ya(t)),
-                r.appendChild(o);
-            }
+            o = (r.style.display = "",
+            ce(r),
+            de(t.avatar));
+            he(o, En == t.id),
+            pe(o, Ya(t)),
+            r.appendChild(o);
             break;
         case Se:
             ke.textContent = E("Rooms"),
@@ -2284,7 +2270,7 @@
         n.element.appendChild(r),
         D(n.element, "click", function() {
             T = n,
-            qe(s, n)
+            qe(0, n)
         }),
         $("player-icons"))
           , l = $("icon owner")
