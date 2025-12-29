@@ -2138,24 +2138,25 @@
             (a = W(n.id)) && (
             // Update player's score if provided
             n.score !== undefined && (a.score = n.score),
-            // Show message with word in green
-            (function() {
-                var msg = E("$ guessed the word!", a.name);
-                var msgEl = y(msg, "", f(1), !0);
-                msgEl.classList.add("guessed");
-                // Add word in green if available
-                if (n.word) {
+            // Only show "guessed" message if word is provided (silent score updates for drawer when word is null)
+            n.word && (
+                (function() {
+                    var msg = E("$ guessed the word!", a.name);
+                    var msgEl = y(msg, "", f(1), !0);
+                    msgEl.classList.add("guessed");
+                    // Add word in green
                     var wordSpan = c.createElement("span");
                     wordSpan.textContent = " " + n.word;
                     wordSpan.style.color = "var(--COLOR_CHAT_TEXT_GUESSED)";
                     var spanEl = msgEl.querySelector("span");
                     if (spanEl) spanEl.appendChild(wordSpan);
-                }
-            })(),
-            Fa(a, !0),
-            R.playSound(xn),
-            Ka(),  // Update score display
-            n.id == x) && ga(n.word);
+                })(),
+                Fa(a, !0),
+                R.playSound(xn),
+                n.id == x && ga(n.word)
+            ),
+            Ka()  // Update score display (always update leaderboard)
+            );
             break;
         case Sa:
             (a = W(n.id)) && (

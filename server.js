@@ -173,11 +173,20 @@ function getRandomWords(lang, count, customWords = null) {
   return shuffled.slice(0, count);
 }
 
-function calculateScore(timeRemaining, totalTime, wordLength) {
-  // skribbl.io scoring formula: baseScore = wordLength * 10, then multiply by time ratio
+function calculateScore(timeRemaining, totalTime, wordLength, guessPosition) {
+  // skribbl.io scoring formula:
+  // Base score = wordLength * 10, multiplied by time ratio, then by position multiplier
   const baseScore = wordLength * 10;
   const timeRatio = timeRemaining / totalTime;
-  return Math.floor(baseScore * timeRatio);
+  
+  // Position multipliers: 1st = 100%, 2nd = 75%, 3rd = 50%, 4th+ = 25%
+  let positionMultiplier = 1.0;
+  if (guessPosition === 1) positionMultiplier = 1.0;
+  else if (guessPosition === 2) positionMultiplier = 0.75;
+  else if (guessPosition === 3) positionMultiplier = 0.5;
+  else positionMultiplier = 0.25;
+  
+  return Math.floor(baseScore * timeRatio * positionMultiplier);
 }
 
 // Initialize public rooms for each language
@@ -712,9 +721,30 @@ io.on('connection', (socket) => {
             
             if (guess === word) {
               const timeRemaining = room.timer;
-              const score = calculateScore(timeRemaining, room.settings[SETTINGS.DRAWTIME], word.length);
-              player.score += score;
+              room.guessCount = (room.guessCount || 0) + 1;
+              const guessPosition = room.guessCount;
+              
+              // Calculate guesser's score based on position
+              const guesserScore = calculateScore(timeRemaining, room.settings[SETTINGS.DRAWTIME], word.length, guessPosition);
+              player.score += guesserScore;
               player.guessed = true;
+              
+              // Give drawer the same points as the guesser (faster guesses = more points for drawer)
+              const drawer = room.players.find(p => p.id === room.currentDrawer);
+              if (drawer) {
+                drawer.score += guesserScore;
+              }
+              
+              // If first guess and timer > 30s and more than 2 players, drop timer to 30s
+              if (guessPosition === 1 && room.timer > 30 && room.players.length > 2) {
+                room.timer = 30;
+                // Restart the timer interval with the new value
+                if (room.timerInterval) {
+                  clearInterval(room.timerInterval);
+                  room.timerInterval = null;
+                }
+                startRoundTimer(room);
+              }
               
               // Send GUESS packet with updated score to all players
               io.to(currentRoomId).emit('data', {
@@ -725,6 +755,19 @@ io.on('connection', (socket) => {
                   score: player.score  // Send updated total score
                 }
               });
+              
+              // Update drawer's score on all clients (they got the same points as the guesser)
+              // Send GUESS packet with drawer's ID but no word, so client updates score without "guessed" message
+              if (drawer) {
+                io.to(currentRoomId).emit('data', {
+                  id: PACKET.GUESS,
+                  data: {
+                    id: room.currentDrawer,
+                    word: null,  // No word = silent score update only
+                    score: drawer.score  // Send drawer's updated total score
+                  }
+                });
+              }
               
               // Check if all players guessed
               const allGuessed = room.players.filter(p => p.id !== room.currentDrawer).every(p => p.guessed);
@@ -905,6 +948,8 @@ io.on('connection', (socket) => {
       p.guessed = false;
       p.roundStartScore = p.score;  // Track score at round start
     });
+    // Reset guess counter for position tracking
+    room.guessCount = 0;
     
     // Select words
     const words = getRandomWords(
