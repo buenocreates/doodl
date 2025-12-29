@@ -754,15 +754,26 @@ io.on('connection', (socket) => {
         
       case PACKET.CHAT:
         // Handle chat messages (packet id 30)
-        if (room.state === GAME_STATE.DRAWING && socket.id !== room.currentDrawer) {
-          // Regular chat during drawing
-          io.to(currentRoomId).emit('data', {
-            id: PACKET.CHAT,
-            data: {
-              id: socket.id,
-              msg: data.data
-            }
-          });
+        if (room.state === GAME_STATE.DRAWING) {
+          if (socket.id === room.currentDrawer) {
+            // Drawer's chat - only send to drawer (they see it in green, others don't see it)
+            socket.emit('data', {
+              id: PACKET.CHAT,
+              data: {
+                id: socket.id,
+                msg: data.data
+              }
+            });
+          } else {
+            // Regular chat during drawing - guessing players can chat normally
+            io.to(currentRoomId).emit('data', {
+              id: PACKET.CHAT,
+              data: {
+                id: socket.id,
+                msg: data.data
+              }
+            });
+          }
         } else if (room.state === GAME_STATE.LOBBY) {
           // Chat in lobby
           io.to(currentRoomId).emit('data', {
