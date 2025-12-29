@@ -502,6 +502,12 @@
     };
     let Ue = new Map;
     function He() {
+        // Don't set readonly if it's the drawer's turn (they need to type)
+        if (L.id == j && M == x) {
+            _n[0].removeAttribute("readonly");
+            _n[1].removeAttribute("readonly");
+            return;
+        }
         1 == Ye.value ? (_n[1].setAttribute("readonly", ""),
         c.documentElement.dataset.mobileKeyboard = "") : (_n[1].removeAttribute("readonly"),
         delete c.documentElement.dataset.mobileKeyboard)
@@ -1899,22 +1905,26 @@
             Pn.classList.remove("toolbar-hidden"),
             yt(),
             // Enable chat input for drawer (they can type, messages appear in green)
-            // Force enable even if mobile keyboard is enabled
-            _n[0].disabled = !1,
-            _n[1].disabled = !1,
+            // Force enable even if mobile keyboard is enabled - drawer MUST be able to type
+            _n[0].disabled = false,
+            _n[1].disabled = false,
+            _n[0].readOnly = false,
+            _n[1].readOnly = false,
             _n[0].removeAttribute("readonly"),
             _n[1].removeAttribute("readonly"),
+            _n[0].removeAttribute("disabled"),
+            _n[1].removeAttribute("disabled"),
             // Focus the appropriate input (desktop or mobile) so drawer can type immediately
             setTimeout(function() {
                 // Try desktop input first, fallback to mobile
-                try {
+                if (_n[0] && !_n[0].disabled && !_n[0].readOnly) {
                     _n[0].focus();
-                } catch(e) {
-                    try {
-                        _n[1].focus();
-                    } catch(e2) {}
+                    _n[0].click(); // Also trigger click to ensure it's active
+                } else if (_n[1] && !_n[1].disabled && !_n[1].readOnly) {
+                    _n[1].focus();
+                    _n[1].click();
                 }
-            }, 100)) : (da(!0),
+            }, 200)) : (da(!0),
             // Enable chat input for guessing players
             _n[0].disabled = !1,
             _n[1].disabled = !1,
@@ -2004,15 +2014,15 @@
         if (typeof e === "string" && e.length > 0) {
             for (a = 0; a < e.length; a++) {
                 if (e[a] === " ") {
-                    // For spaces, create a visible spacer element to show the gap between words
-                    // This creates a clear visual separation like in the official skribbl.io
+                    // For spaces, create a visible gap between word parts (like official skribbl.io)
+                    // Use a spacer with larger margins to create clear visual separation
                     var spaceEl = $("hint", "");
-                    spaceEl.style.width = "0.5ch";
-                    spaceEl.style.minWidth = "0.5ch";
-                    spaceEl.style.marginLeft = "0.5ch";
-                    spaceEl.style.marginRight = "0.5ch";
+                    spaceEl.style.width = "0";
+                    spaceEl.style.minWidth = "0";
+                    spaceEl.style.marginLeft = "1.2ch";
+                    spaceEl.style.marginRight = "1.2ch";
                     spaceEl.style.display = "inline-block";
-                    spaceEl.style.visibility = "hidden"; // Invisible but takes up space
+                    spaceEl.style.flexShrink = "0";
                     N[2].appendChild(spaceEl);
                     N[2].hints[a] = null; // No hint element for spaces (can't reveal letters on spaces)
                 } else {
