@@ -802,7 +802,7 @@
                     data.code = window._lastApiRoomId;
                   }
                   console.log('📤 Emitting login:', { join: data.join, create: data.create, name: data.name, code: data.code });
-      }
+                }
                 return originalEmit.apply(this, arguments);
               };
               
@@ -838,7 +838,6 @@
                     window._roomCode = data.data.code || data.data.id;
                     window._roomId = data.data.id;
                     console.log('🔗 Room code/ID received:', window._roomCode);
-                  }
                     
                     // Patch invite functionality to use our domain and room code
                     // Wait for game.js to initialize first, then patch continuously
