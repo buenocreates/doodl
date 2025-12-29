@@ -1275,10 +1275,23 @@ io.on('connection', (socket) => {
       }
     });
     
-    // Wait 5 seconds, then start next round
+    // Wait 7 seconds, then return to lobby (players stay in room)
     setTimeout(() => {
-      startRound(room);
-    }, 5000);
+      room.state = GAME_STATE.LOBBY;
+      room.currentDrawer = -1;
+      room.currentWord = '';
+      room.timer = 0;
+      
+      // Send LOBBY state to all clients
+      io.to(room.id).emit('data', {
+        id: PACKET.STATE,
+        data: {
+          id: GAME_STATE.LOBBY,
+          time: 0,
+          data: {}
+        }
+      });
+    }, 7000);
   }
   
   function endGame(room) {
@@ -1305,15 +1318,28 @@ io.on('connection', (socket) => {
       }
     });
     
-    // Reset room after 10 seconds
+    // Reset room after 7 seconds and return to lobby (players stay in room)
     setTimeout(() => {
       room.state = GAME_STATE.LOBBY;
       room.currentRound = 0;
+      room.currentDrawer = -1;
+      room.currentWord = '';
+      room.timer = 0;
       room.players.forEach(p => {
         p.score = 0;
         p.guessed = false;
       });
-    }, 10000);
+      
+      // Send LOBBY state to all clients
+      io.to(room.id).emit('data', {
+        id: PACKET.STATE,
+        data: {
+          id: GAME_STATE.LOBBY,
+          time: 0,
+          data: {}
+        }
+      });
+    }, 7000);
   }
   
   function kickPlayer(room, playerId, reason) {
@@ -1334,11 +1360,11 @@ io.on('connection', (socket) => {
           }
         });
         
-        // Send message to chat
+        // Send message to chat (system message - no player ID)
         io.to(room.id).emit('data', {
           id: PACKET.CHAT,
           data: {
-            id: room.owner || 'system',
+            id: null,  // System message - no player name prefix
             msg: reason === 1 ? `${kickedPlayer.name} has been kicked!` : `${kickedPlayer.name} has been banned!`
           }
         });
@@ -1393,11 +1419,11 @@ io.on('connection', (socket) => {
       data: [voterId, targetId, voteCount, requiredVotes]
     });
     
-    // Send message to chat
+    // Send message to chat (system message - no player ID)
     io.to(room.id).emit('data', {
       id: PACKET.CHAT,
       data: {
-        id: voterId,
+        id: null,  // System message - no player name prefix
         msg: `${voterPlayer.name} is voting to kick ${targetPlayer.name} (${voteCount}/${requiredVotes})`
       }
     });

@@ -2185,7 +2185,8 @@
             y(E("$ is close!", n), "", f(Le), !0);
             break;
         case Na:
-            Ba(W(n.id), n.msg);
+            // Handle system messages (id is null) vs player messages
+            Ba(n.id === null || n.id === void 0 ? null : W(n.id), n.msg);
             break;
         case Oa:
             y(E("Spam detected! You're sending messages too quickly."), "", f(Ee), !0);
@@ -2287,6 +2288,15 @@
     }
     function Ba(e, t) {
         var n, a, o;
+        // System messages (e is null or e.id is null) - display without player name
+        if (!e || e.id === null || e.id === void 0) {
+            // System messages: check if it's a kick/ban (red) or votekick (yellow)
+            var isKick = t.indexOf("has been kicked") !== -1 || t.indexOf("has been banned") !== -1;
+            var isVotekick = t.indexOf("is voting to kick") !== -1;
+            o = isKick ? Le : (isVotekick ? De : Me);  // Le = LEAVE (red), De = CLOSE (yellow), Me = BASE (default)
+            y("", t, f(o), !1);
+            return;
+        }
         !e.muted && (o = ((a = W(x)).flags & k) == k,
         n = e.id == M || e.guessed,
         x == M || a.guessed || !n || o) && (a = (e.flags & k) == k,
