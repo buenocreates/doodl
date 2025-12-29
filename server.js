@@ -462,6 +462,20 @@ io.on('connection', (socket) => {
         roomCodes.set(roomCode, roomId);
         roomCodeToId.set(roomId, roomCode);
       }
+    } else if (roomId) {
+      // Check if roomId is actually a room code (8 alphanumeric chars) and resolve it
+      // This handles invite links where users join with a room code
+      if (roomId.length === 8 && /^[A-Za-z0-9]+$/.test(roomId) && !rooms.has(roomId)) {
+        const resolvedRoomId = roomCodes.get(roomId);
+        if (resolvedRoomId && rooms.has(resolvedRoomId)) {
+          console.log('🔗 Resolved room code in Socket.IO login:', roomId, '→', resolvedRoomId);
+          roomId = resolvedRoomId;
+        } else {
+          console.log('⚠️ Room code not found:', roomId);
+          socket.emit('joinerr', 1); // Room not found
+          return;
+        }
+      }
     }
     
     if (!roomId) {
