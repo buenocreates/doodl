@@ -704,43 +704,55 @@ io.on('connection', (socket) => {
         break;
         
       case PACKET.GUESS:
-        if (room.state === GAME_STATE.DRAWING && socket.id !== room.currentDrawer && !player.guessed) {
-          const guess = data.data.toLowerCase().trim();
-          const word = room.currentWord.toLowerCase().trim();
-          
-          if (guess === word) {
-            const timeRemaining = room.timer;
-            const score = calculateScore(timeRemaining, room.settings[SETTINGS.DRAWTIME], word.length);
-            player.score += score;
-            player.guessed = true;
+        if (room.state === GAME_STATE.DRAWING && socket.id !== room.currentDrawer) {
+          if (!player.guessed) {
+            const guess = data.data.toLowerCase().trim();
+            const word = room.currentWord.toLowerCase().trim();
             
-            io.to(currentRoomId).emit('data', {
-              id: PACKET.GUESS,
-              data: {
-                id: socket.id,
-                word: room.currentWord,
-                score: player.score  // Send updated score
+            if (guess === word) {
+              const timeRemaining = room.timer;
+              const score = calculateScore(timeRemaining, room.settings[SETTINGS.DRAWTIME], word.length);
+              player.score += score;
+              player.guessed = true;
+              
+              io.to(currentRoomId).emit('data', {
+                id: PACKET.GUESS,
+                data: {
+                  id: socket.id,
+                  word: room.currentWord,
+                  score: player.score  // Send updated score
+                }
+              });
+              
+              // Check if all players guessed
+              const allGuessed = room.players.filter(p => p.id !== room.currentDrawer).every(p => p.guessed);
+              if (allGuessed) {
+                endRound(room, 0); // Everyone guessed
               }
-            });
-            
-            // Check if all players guessed
-            const allGuessed = room.players.filter(p => p.id !== room.currentDrawer).every(p => p.guessed);
-            if (allGuessed) {
-              endRound(room, 0); // Everyone guessed
+            } else {
+              // Check if close guess - exactly 1 letter difference (1 letter wrong, missing, or extra)
+              const distance = levenshteinDistance(guess, word);
+              const maxLength = Math.max(guess.length, word.length);
+              // Consider "close" if Levenshtein distance is exactly 1
+              if (distance === 1 && maxLength > 0) {
+                socket.emit('data', {
+                  id: PACKET.CLOSE,
+                  data: data.data  // Send original guess (not lowercased) to preserve formatting
+                });
+                // Don't display in chat if it's a close guess (player sees "close" message instead)
+              } else {
+                // Wrong guess - display as chat message
+                io.to(currentRoomId).emit('data', {
+                  id: PACKET.CHAT,
+                  data: {
+                    id: socket.id,
+                    msg: data.data
+                  }
+                });
+              }
             }
           } else {
-          // Check if close guess - exactly 1 letter difference (1 letter wrong, missing, or extra)
-          const distance = levenshteinDistance(guess, word);
-          const maxLength = Math.max(guess.length, word.length);
-          // Consider "close" if Levenshtein distance is exactly 1
-          if (distance === 1 && maxLength > 0) {
-            socket.emit('data', {
-              id: PACKET.CLOSE,
-              data: data.data  // Send original guess (not lowercased) to preserve formatting
-            });
-            // Don't display in chat if it's a close guess (player sees "close" message instead)
-          } else {
-            // Wrong guess - display as chat message
+            // Player already guessed - just send as chat message
             io.to(currentRoomId).emit('data', {
               id: PACKET.CHAT,
               data: {
@@ -748,7 +760,6 @@ io.on('connection', (socket) => {
                 msg: data.data
               }
             });
-          }
           }
         }
         break;
