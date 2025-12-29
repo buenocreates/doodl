@@ -729,13 +729,14 @@ io.on('connection', (socket) => {
               endRound(room, 0); // Everyone guessed
             }
           } else {
-          // Check if close guess (Levenshtein distance)
-          const similarity = calculateSimilarity(guess, word);
-          // Use a lower threshold (0.6) to be more lenient with close guesses
-          if (similarity >= 0.6 && similarity < 1.0) {
+          // Check if close guess - exactly 1 letter difference (1 letter wrong, missing, or extra)
+          const distance = levenshteinDistance(guess, word);
+          const maxLength = Math.max(guess.length, word.length);
+          // Consider "close" if Levenshtein distance is exactly 1
+          if (distance === 1 && maxLength > 0) {
             socket.emit('data', {
               id: PACKET.CLOSE,
-              data: guess
+              data: data.data  // Send original guess (not lowercased) to preserve formatting
             });
           }
           }
