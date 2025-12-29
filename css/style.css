@@ -1247,11 +1247,8 @@ body .snow {
 
 #game-players .player .player-icons .icon.rate {
     background-size: cover;
-    position: absolute;
-    left: 200px;
-    bottom: 0;
-    margin-right: 0;
-    margin-left: 0;
+    width: 32px;
+    height: 32px;
 }
 
 @keyframes rate_fadeout {
