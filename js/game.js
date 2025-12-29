@@ -1900,10 +1900,14 @@
             yt(),
             // Enable chat input for drawer (they can type, messages appear in green)
             _n[0].disabled = !1,
-            _n[1].disabled = !1) : (da(!0),
+            _n[1].disabled = !1,
+            _n[0].removeAttribute("readonly"),
+            _n[1].removeAttribute("readonly")) : (da(!0),
             // Enable chat input for guessing players
             _n[0].disabled = !1,
             _n[1].disabled = !1,
+            _n[0].removeAttribute("readonly"),
+            _n[1].removeAttribute("readonly"),
             // For guessing players, use wordStructure if available (preserves spaces), otherwise use wordLength or word length
             pa(e.data.wordStructure || (e.data.word === undefined && e.data.wordLength !== undefined ? e.data.wordLength : (e.data.word ? e.data.word.length : 0)), !1),
             ma(e.data.hints))
@@ -1913,7 +1917,9 @@
                 Fa(w[o], !1);
             // Enable chat input when not in DRAWING state
             _n[0].disabled = !1,
-            _n[1].disabled = !1
+            _n[1].disabled = !1,
+            _n[0].removeAttribute("readonly"),
+            _n[1].removeAttribute("readonly")
         }
         if (e.id == X && 0 < e.data.length) {
             for (var s = [], i = 0, o = 0; o < e.data.length; o++) {
@@ -1982,17 +1988,16 @@
         N[2].style.display = "",
         ce(N[2]),
         N[2].hints = [];
-        // If we have the actual word (string), handle spaces properly
+        // If we have the actual word structure (string), handle spaces properly
         if (typeof e === "string" && e.length > 0) {
             for (a = 0; a < e.length; a++) {
                 if (e[a] === " ") {
-                    // For spaces, create a span element with width to preserve spacing (multiple spaces visible)
-                    var spaceEl = document.createElement("span");
-                    spaceEl.style.display = "inline-block";
-                    spaceEl.style.width = "1ch";
-                    spaceEl.style.textAlign = "center";
+                    // For spaces, create a hint-like element but with space character to preserve spacing
+                    var spaceEl = $("hint", " ");
+                    spaceEl.style.backgroundColor = "transparent";
+                    spaceEl.style.color = "transparent";
                     N[2].appendChild(spaceEl);
-                    N[2].hints[a] = null; // No hint element for spaces
+                    N[2].hints[a] = null; // No hint element for spaces (can't reveal letters on spaces)
                 } else {
                     N[2].hints[a] = $("hint", o ? "?" : "_"),
                     N[2].appendChild(N[2].hints[a]);
@@ -2011,8 +2016,11 @@
         for (var t = N[2].hints, n = 0; n < e.length; n++) {
             var a = e[n][0]
               , o = e[n][1];
-            t[a].textContent = o,
-            t[a].classList.add("uncover")
+            // Skip if hint element is null (spaces)
+            if (t[a]) {
+                t[a].textContent = o,
+                t[a].classList.add("uncover")
+            }
         }
     }
     function ga(e) {
