@@ -1897,7 +1897,10 @@
             N[2].style.display = "none",
             N[1].textContent = a,
             Pn.classList.remove("toolbar-hidden"),
-            yt()) : (da(!0),
+            yt(),
+            // Enable chat input for drawer (they can type, messages appear in green)
+            _n[0].disabled = !1,
+            _n[1].disabled = !1) : (da(!0),
             // Enable chat input for guessing players
             _n[0].disabled = !1,
             _n[1].disabled = !1,
@@ -2611,10 +2614,6 @@
     D(Hn, "submit", function(e) {
         e.preventDefault();
         var e = this.querySelector("input");
-        // Prevent drawer from sending messages during DRAWING state
-        if (L.id == j && M == x) {
-            return !1;
-        }
         return e.value && (e = e.value,
         S && S.connected ? (
             // If in DRAWING state and not the drawer, send as GUESS, otherwise send as CHAT
