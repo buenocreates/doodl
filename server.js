@@ -174,8 +174,9 @@ function getRandomWords(lang, count, customWords = null) {
 }
 
 function calculateScore(timeRemaining, totalTime, wordLength) {
+  // skribbl.io scoring formula: baseScore = wordLength * 10, then multiply by time ratio
+  const baseScore = wordLength * 10;
   const timeRatio = timeRemaining / totalTime;
-  const baseScore = Math.floor(wordLength * 10);
   return Math.floor(baseScore * timeRatio);
 }
 
@@ -715,12 +716,13 @@ io.on('connection', (socket) => {
               player.score += score;
               player.guessed = true;
               
+              // Send GUESS packet with updated score to all players
               io.to(currentRoomId).emit('data', {
                 id: PACKET.GUESS,
                 data: {
                   id: socket.id,
                   word: room.currentWord,
-                  score: player.score  // Send updated score
+                  score: player.score  // Send updated total score
                 }
               });
               
@@ -882,6 +884,7 @@ io.on('connection', (socket) => {
     room.players.forEach(p => {
       p.score = 0;
       p.guessed = false;
+      p.roundStartScore = 0;  // Initialize round start score
     });
     startRound(room);
   }
@@ -897,7 +900,11 @@ io.on('connection', (socket) => {
     // Select drawer (round robin)
     const drawerIndex = (room.currentRound - 1) % room.players.length;
     room.currentDrawer = room.players[drawerIndex].id;
-    room.players.forEach(p => p.guessed = false);
+    // Store scores at round start to calculate round score later
+    room.players.forEach(p => {
+      p.guessed = false;
+      p.roundStartScore = p.score;  // Track score at round start
+    });
     
     // Select words
     const words = getRandomWords(
@@ -1131,10 +1138,12 @@ io.on('connection', (socket) => {
     
     room.state = GAME_STATE.ROUND_END;
     
-    // Calculate scores
+    // Calculate scores: [playerId, totalScore, roundScore]
+    // roundScore is the delta for this round (shown with + prefix)
     const scores = [];
     room.players.forEach(p => {
-      scores.push(p.id, p.score, 0);
+      const roundScore = p.score - (p.roundStartScore || 0);
+      scores.push(p.id, p.score, roundScore);
     });
     
     io.to(room.id).emit('data', {
