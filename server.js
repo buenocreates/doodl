@@ -920,7 +920,7 @@ io.on('connection', (socket) => {
           if (room.owner === socket.id) {
             if (room.players.length > 0) {
               // Transfer to first remaining player
-              room.owner = room.players[0].id;
+            room.owner = room.players[0].id;
               
               // If it's a private room with only 1 player, handle separately (below)
               // Otherwise, handle normal ownership transfer
@@ -929,12 +929,12 @@ io.on('connection', (socket) => {
               } else {
                 // Multiple players - send owner change notification
                 const sendOwnerChange = () => {
-                  io.to(currentRoomId).emit('data', {
-                    id: PACKET.OWNER,
-                    data: room.owner
-                  });
+            io.to(currentRoomId).emit('data', {
+              id: PACKET.OWNER,
+              data: room.owner
+            });
                 };
-                
+          
                 // If it's a private room, return to lobby (settings screen)
                 if (!room.isPublic) {
                   // Reset room state to lobby

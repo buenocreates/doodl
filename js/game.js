@@ -1767,7 +1767,7 @@
             // Check if we're in LOBBY state (owner change scenario) - don't redirect in that case
             if (L.id != J) {
                 // Not in lobby - this is a real disconnect, redirect to home
-                h.location.href = "/"
+            h.location.href = "/"
             }
             // If in lobby, stay on the page (owner change scenario)
         }),
@@ -2277,7 +2277,7 @@
                         h.location.href = "/"; // Redirect to home
                     }, 3000);
                 } else {
-                    y(E("Server restarting in about $ seconds!", n.data), "", f(Ee), !0)
+                y(E("Server restarting in about $ seconds!", n.data), "", f(Ee), !0)
                 }
                 break;
             default:
