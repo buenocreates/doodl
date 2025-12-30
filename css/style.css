@@ -3331,7 +3331,7 @@ form.chat-form input {
 }
 
 #modal .modal-container-settings {
-    width: 360px;
+    width: 500px;
     flex-direction: column
 }
 
@@ -3347,7 +3347,7 @@ form.chat-form input {
 }
 
 #modal .modal-container-settings .group {
-    margin-bottom: 0.7em
+    margin-bottom: 1em
 }
 
 #modal .modal-container-settings .group:last-child {
@@ -3357,9 +3357,9 @@ form.chat-form input {
 #modal .modal-container-settings .group .title {
     position: relative;
     display: flex;
-    font-size: 1.2em;
+    font-size: 1.3em;
     font-weight: 700;
-    margin-bottom: 0.2em
+    margin-bottom: .1em
 }
 
 #modal .modal-container-settings .group .title .icon {
@@ -3388,7 +3388,7 @@ form.chat-form input {
 }
 
 #modal .modal-container-settings .group .item {
-    margin-bottom: 0.4em
+    margin-bottom: .5em
 }
 
 #modal .modal-container-settings .group .item:last-child {
@@ -3585,8 +3585,8 @@ form.chat-form input {
 #modal .modal-container .modal-title {
     flex: 0 0 auto;
     position: relative;
-    padding: 0.5em 0.5em 0.2em 0.5em;
-    font-size: 1.7em;
+    padding: .5em .5em 0 .5em;
+    font-size: 1.8em;
     font-weight: 700;
     color: #fff
 }
@@ -3608,8 +3608,8 @@ form.chat-form input {
 
 #modal .modal-container .modal-content {
     flex: 1 1 auto;
-    padding: 0.7em;
-    padding-top: 0.3em;
+    padding: 1em;
+    padding-top: .5em;
     white-space: pre-line;
     color: #fff
 }
