@@ -3341,7 +3341,7 @@ form.chat-form input {
 #modal .modal-container-settings {
     width: 350px;
     flex-direction: column;
-    line-height: 1
+    line-height: 0
 }
 
 #modal .modal-container-settings button.reset {
@@ -3358,7 +3358,7 @@ form.chat-form input {
 #modal .modal-container-settings .group {
     margin-bottom: 0;
     margin-top: 0;
-    line-height: 1;
+    line-height: 0;
     padding: 0
 }
 
@@ -3373,8 +3373,9 @@ form.chat-form input {
     font-weight: 700;
     margin-bottom: 0;
     margin-top: 0;
-    line-height: 1.2;
-    padding: 0
+    line-height: 1;
+    padding: 0;
+    height: auto
 }
 
 #modal .modal-container-settings .group .title .icon {
@@ -3404,13 +3405,14 @@ form.chat-form input {
 
 #modal .modal-container-settings .group .item {
     margin-bottom: 0;
-    line-height: 1;
+    line-height: 0;
     margin-top: 0;
     padding: 0
 }
 
 #modal .modal-container-settings .group .title + .item {
-    margin-top: 0
+    margin-top: 0;
+    padding-top: 0
 }
 
 #modal .modal-container-settings .group .item:last-child {
@@ -3428,7 +3430,8 @@ form.chat-form input {
 
 #modal .modal-container-settings .group .item .key + select,
 #modal .modal-container-settings .group .item .key + input {
-    margin-top: 0
+    margin-top: 0;
+    margin-bottom: 0
 }
 
 #modal .modal-container-settings .group .item input[type="range"],
@@ -3442,7 +3445,8 @@ form.chat-form input {
 
 #modal .modal-container-settings .group .item input[type="range"] {
     margin-top: 0;
-    margin-bottom: 0
+    margin-bottom: 0;
+    padding: 0
 }
 
 #modal .modal-container-settings .group #hotkey-list {
@@ -3662,7 +3666,12 @@ form.chat-form input {
     padding-top: 0.15em;
     white-space: pre-line;
     color: #fff;
-    line-height: 1
+    line-height: 0
+}
+
+#modal .modal-container-settings .group .title .desc,
+#modal .modal-container-settings .group .title .volume-value {
+    line-height: 1.2
 }
 
 @media (min-aspect-ratio: 1) and (max-width:1166px) {
