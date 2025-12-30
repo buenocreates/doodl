@@ -2014,13 +2014,13 @@
         if (typeof e === "string" && e.length > 0) {
             for (a = 0; a < e.length; a++) {
                 if (e[a] === " ") {
-                    // For spaces, create a visible gap between word parts (like official skribbl.io)
-                    // Use a spacer with larger margins to create clear visual separation
+                    // For spaces, create a small gap between word parts (matching official skribbl.io exactly)
+                    // Official uses gap: .08em, so we use a small margin to match
                     var spaceEl = $("hint", "");
                     spaceEl.style.width = "0";
                     spaceEl.style.minWidth = "0";
-                    spaceEl.style.marginLeft = "1.2ch";
-                    spaceEl.style.marginRight = "1.2ch";
+                    spaceEl.style.marginLeft = "0.3ch";
+                    spaceEl.style.marginRight = "0.3ch";
                     spaceEl.style.display = "inline-block";
                     spaceEl.style.flexShrink = "0";
                     N[2].appendChild(spaceEl);
@@ -2211,7 +2211,23 @@
                 y(E("You need at least 2 players to start the game!"), "", f(Ee), !0);
                 break;
             case 100:
-                y(E("Server restarting in about $ seconds!", n.data), "", f(Ee), !0)
+                // Room owner left or room closed - show error and redirect
+                if (n.message) {
+                    y(n.message, "", f(Ee), !0);
+                    // Redirect to home after a delay
+                    setTimeout(function() {
+                        ua(); // Leave lobby
+                        h.location.href = "/"; // Redirect to home
+                    }, 3000);
+                } else {
+                    y(E("Server restarting in about $ seconds!", n.data), "", f(Ee), !0)
+                }
+                break;
+            default:
+                // Generic error message
+                if (n.message) {
+                    y(n.message, "", f(Ee), !0);
+                }
             }
             break;
         case Ia:

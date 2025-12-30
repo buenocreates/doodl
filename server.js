@@ -907,6 +907,7 @@ io.on('connection', (socket) => {
         // Remove player
         const index = room.players.findIndex(p => p.id === socket.id);
         if (index !== -1) {
+          const leavingPlayer = room.players[index];
           room.players.splice(index, 1);
           
           // If drawer left, end round
@@ -914,27 +915,58 @@ io.on('connection', (socket) => {
             endRound(room, 1); // Drawer left
           }
           
-          // Transfer ownership if needed
-          if (room.owner === socket.id && room.players.length > 0) {
-            room.owner = room.players[0].id;
-            io.to(currentRoomId).emit('data', {
-              id: PACKET.OWNER,
-              data: room.owner
-            });
+          // Handle ownership transfer
+          if (room.owner === socket.id) {
+            if (room.players.length > 0) {
+              // Transfer to first remaining player
+              room.owner = room.players[0].id;
+              io.to(currentRoomId).emit('data', {
+                id: PACKET.OWNER,
+                data: room.owner
+              });
+            } else {
+              // Room is now empty - if it was a private room, clean it up
+              // Public rooms will be cleaned up below
+              if (!room.isPublic) {
+                rooms.delete(currentRoomId);
+              }
+            }
           }
           
-          // Broadcast leave
+          // Broadcast leave with player name
           socket.to(currentRoomId).emit('data', {
             id: PACKET.LEAVE,
             data: {
               id: socket.id,
-              reason: 0
+              reason: 0,
+              name: leavingPlayer ? leavingPlayer.name : 'User'
             }
           });
           
-          // Clean up empty rooms
+          // If room is now empty (or only 1 player in a private room), handle cleanup
           if (room.players.length === 0) {
+            // Room is empty - delete it
             rooms.delete(currentRoomId);
+            console.log('🗑️ Room deleted (empty):', currentRoomId);
+          } else if (room.players.length === 1 && !room.isPublic) {
+            // Private room with only 1 player left - send error and redirect to public
+            const remainingPlayer = room.players[0];
+            io.to(remainingPlayer.id).emit('data', {
+              id: PACKET.ERROR,
+              data: {
+                id: 100,
+                message: 'The room owner left! Redirecting to public server...'
+              }
+            });
+            // Give a moment for the message, then disconnect them so they reconnect to public
+            setTimeout(() => {
+              const playerSocket = io.sockets.sockets.get(remainingPlayer.id);
+              if (playerSocket) {
+                playerSocket.disconnect(true);
+              }
+            }, 3000);
+            rooms.delete(currentRoomId);
+            console.log('🔄 Private room closed, redirecting last player to public:', currentRoomId);
           }
         }
       }
