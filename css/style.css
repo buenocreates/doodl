@@ -3307,18 +3307,18 @@ form.chat-form input {
 }
 
 #modal input,#modal select {
-    font-size: 0.95em;
-    height: 1.85em
+    font-size: 0.9em;
+    height: 1.75em
 }
 
 #modal button {
-    font-size: 1em;
-    padding: 0 .3em 0 .3em;
+    font-size: 0.9em;
+    padding: 0 .25em 0 .25em;
     width: 100%;
     background-color: var(--COLOR_PANEL_BUTTON);
     text-shadow: 2px 2px 0 #0000007a;
     transition: background-color .1s;
-    height: 2.5em;
+    height: 2.2em;
     border-radius: var(--BORDER_RADIUS)
 }
 
@@ -3331,7 +3331,7 @@ form.chat-form input {
 }
 
 #modal .modal-container-settings {
-    width: 400px;
+    width: 360px;
     flex-direction: column
 }
 
@@ -3347,7 +3347,7 @@ form.chat-form input {
 }
 
 #modal .modal-container-settings .group {
-    margin-bottom: 0.5em
+    margin-bottom: 0.4em
 }
 
 #modal .modal-container-settings .group:last-child {
@@ -3357,9 +3357,9 @@ form.chat-form input {
 #modal .modal-container-settings .group .title {
     position: relative;
     display: flex;
-    font-size: 1.2em;
+    font-size: 1.1em;
     font-weight: 700;
-    margin-bottom: 0.15em
+    margin-bottom: 0.1em
 }
 
 #modal .modal-container-settings .group .title .icon {
@@ -3388,7 +3388,7 @@ form.chat-form input {
 }
 
 #modal .modal-container-settings .group .item {
-    margin-bottom: 0.3em
+    margin-bottom: 0.25em
 }
 
 #modal .modal-container-settings .group .item:last-child {
@@ -3585,8 +3585,8 @@ form.chat-form input {
 #modal .modal-container .modal-title {
     flex: 0 0 auto;
     position: relative;
-    padding: 0.4em 0.4em 0.1em 0.4em;
-    font-size: 1.6em;
+    padding: 0.35em 0.35em 0.05em 0.35em;
+    font-size: 1.5em;
     font-weight: 700;
     color: #fff
 }
@@ -3608,8 +3608,8 @@ form.chat-form input {
 
 #modal .modal-container .modal-content {
     flex: 1 1 auto;
-    padding: 0.6em;
-    padding-top: 0.3em;
+    padding: 0.5em;
+    padding-top: 0.25em;
     white-space: pre-line;
     color: #fff
 }
