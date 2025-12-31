@@ -406,11 +406,11 @@ const spamTracker = new Map(); // socket.id -> { messages: [], lastMessage: time
 
 // Anti-spam configuration
 const SPAM_CONFIG = {
-  INSTANT_SPAM_THRESHOLD_MS: 500,   // Messages sent within 500ms are considered "instant spam"
-  INSTANT_SPAM_COUNT: 3,             // Need 3 instant spam messages for first warning
+  INSTANT_SPAM_THRESHOLD_MS: 300,   // Messages sent within 300ms are considered "instant spam" (lower = less strict)
+  INSTANT_SPAM_COUNT: 5,             // Need 5 instant spam messages for first warning (higher = less strict)
   MAX_WARNINGS: 3,                   // Kick after 3 warnings
   WARNING_COOLDOWN_MS: 0,            // No cooldown - show warnings immediately
-  WARNING_RESET_TIME_MS: 5000       // Reset warnings if no spam for 5 seconds
+  WARNING_RESET_TIME_MS: 4000        // Reset warnings if no spam for 4 seconds (slightly faster reset)
 };
 
 function kickPlayer(room, playerId, reason) {
