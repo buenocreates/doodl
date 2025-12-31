@@ -470,13 +470,16 @@ function checkSpam(socketId, message, room) {
       tracker.lastWarningTime = now;
       
       if (tracker.warnings >= SPAM_CONFIG.MAX_WARNINGS) {
-        // Kick the player
+        // Kick the player after 3 warnings
         if (room) {
-          const player = room.players.find(p => p.id === socketId);
-          if (player) {
-            kickPlayer(room, socketId, 1); // Kick reason 1
-            return { isSpam: true, shouldKick: true };
-          }
+          // Use setTimeout to kick after processing the message
+          setTimeout(() => {
+            const player = room.players.find(p => p.id === socketId);
+            if (player) {
+              kickPlayer(room, socketId, 1); // Kick reason 1
+            }
+          }, 100);
+          return { isSpam: true, shouldKick: true };
         }
       } else {
         // Send warning

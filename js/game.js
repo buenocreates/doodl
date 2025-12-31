@@ -2410,12 +2410,11 @@
             return;
         }
         !e.muted && (o = ((a = W(x)).flags & k) == k,
-        // Get current player to check guessed state (don't use e.guessed directly as it might be stale)
+        // Get current player to check guessed state - use fresh player object
         (function() {
             var currentPlayer = W(e.id);
             var currentPlayerGuessed = currentPlayer ? currentPlayer.guessed : false;
             n = e.id == M || currentPlayerGuessed;
-            return n;
         })(),
         x == M || a.guessed || !n || o) && (a = (e.flags & k) == k,
         o = Me,
@@ -2424,18 +2423,27 @@
         (function() {
             // Get the current player object to ensure we have the latest guessed state
             var currentPlayer = W(e.id);
-            // Only check guessed if we're in DRAWING or WORD_CHOICE state, and player exists
-            var playerHasGuessed = false;
-            if (currentPlayer && (L.id == j || L.id == V)) {
-                playerHasGuessed = currentPlayer.guessed === true;
-            }
             var isDrawer = (e.id == M && M != -1) || (e.id == x && (L.id == j || L.id == V));
-            if (isDrawer && (L.id == j || L.id == V)) {
-                o = 1;  // Drawer's messages are green (color 1)
-            } else if (playerHasGuessed && !isDrawer && (L.id == j || L.id == V)) {
-                o = Ie;  // Guesser who has guessed gets GUESSCHAT color (green)
+            
+            // Only apply special colors during DRAWING or WORD_CHOICE
+            if ((L.id == j || L.id == V)) {
+                if (isDrawer) {
+                    o = 1;  // Drawer's messages are green (color 1)
+                } else {
+                    // For guessers: only green if they've ACTUALLY guessed (strict check)
+                    var hasGuessed = false;
+                    if (currentPlayer && typeof currentPlayer.guessed !== 'undefined') {
+                        hasGuessed = currentPlayer.guessed === true;
+                    }
+                    if (hasGuessed) {
+                        o = Ie;  // Guesser who has ACTUALLY guessed gets GUESSCHAT color (green)
+                    } else {
+                        o = Me;  // Normal chat color for guessers who haven't guessed
+                    }
+                }
             } else {
-                o = Me;  // Normal chat color
+                // Not in drawing/word choice - normal color
+                o = Me;
             }
         })(),
         a && (o = Ee),
