@@ -406,13 +406,13 @@ const spamTracker = new Map(); // socket.id -> { messages: [], lastMessage: time
 
 // Anti-spam configuration (exactly like skribbl.io)
 const SPAM_CONFIG = {
-  MAX_MESSAGES_PER_WINDOW: 8,      // Max 8 messages (increased from 6)
-  TIME_WINDOW_MS: 5000,            // In 5 seconds
-  MIN_MESSAGE_INTERVAL_MS: 200,    // Minimum 200ms between messages (increased from 100)
+  MAX_MESSAGES_PER_WINDOW: 5,      // Max 5 messages in time window (like skribbl.io)
+  TIME_WINDOW_MS: 3000,            // In 3 seconds (like skribbl.io)
+  MIN_MESSAGE_INTERVAL_MS: 150,    // Minimum 150ms between messages
   MAX_MESSAGE_LENGTH: 200,         // Max 200 characters per message
-  DUPLICATE_THRESHOLD: 5,           // Max 5 duplicate messages in a row (increased from 4)
-  MAX_WARNINGS: 5,                  // Kick after 5 warnings (increased from 3)
-  WARNING_COOLDOWN_MS: 2000        // 2 second cooldown between warnings (was 0)
+  DUPLICATE_THRESHOLD: 3,           // Max 3 duplicate messages in a row
+  MAX_WARNINGS: 3,                  // Kick after 3 warnings
+  WARNING_COOLDOWN_MS: 1000        // 1 second cooldown between warnings
 };
 
 function checkSpam(socketId, message, room) {
@@ -493,9 +493,13 @@ function checkSpam(socketId, message, room) {
     return { isSpam: true, shouldWarn: shouldWarn, warnings: tracker.warnings };
   }
   
-  // Add current message to tracker (only if not spam)
+  // Not spam - add message to tracker and reset duplicate count
   tracker.messages.push(now);
   tracker.lastMessage = now;
+  // Reset duplicate count when message changes
+  if (message !== tracker.lastMessageText) {
+    tracker.duplicateCount = 0;
+  }
   tracker.lastMessageText = message;
   
   return { isSpam: false };

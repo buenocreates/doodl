@@ -2113,11 +2113,14 @@
         }
     }
     function ma(e) {
+        if (!e || !Array.isArray(e)) return; // Safety check
         for (var t = N[2].hints, n = 0; n < e.length; n++) {
+            // Check if e[n] exists and is an array
+            if (!e[n] || !Array.isArray(e[n]) || e[n].length < 2) continue;
             var a = e[n][0]
               , o = e[n][1];
             // Skip if hint element is null (spaces)
-            if (t[a]) {
+            if (t && t[a]) {
                 t[a].textContent = o,
                 t[a].classList.add("uncover")
             }
