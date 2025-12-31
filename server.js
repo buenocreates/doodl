@@ -1011,9 +1011,11 @@ io.on('connection', (socket) => {
         // Handle chat messages (packet id 30)
         // Anti-spam check
         const spamResult = checkSpam(socket.id, data.data, room);
+        console.log(`[CHAT HANDLER] spamResult for ${socket.id}:`, JSON.stringify(spamResult));
         if (spamResult.isSpam) {
           if (spamResult.shouldKick) {
-            console.log(`[CHAT HANDLER] Player ${socket.id} should be kicked, returning early`);
+            console.log(`[CHAT HANDLER] *** Player ${socket.id} should be kicked, returning early ***`);
+            // Kick should have already been called in checkSpam, just return
             return; // Player was kicked, don't process the chat message
           }
           if (spamResult.shouldWarn) {
@@ -1745,11 +1747,15 @@ io.on('connection', (socket) => {
   }
   
   function kickPlayer(room, playerId, reason) {
-    console.log(`[KICK] ===== kickPlayer called for ${playerId}, reason: ${reason} =====`);
+    console.log(`[KICK] ========================================`);
+    console.log(`[KICK] kickPlayer called for ${playerId}, reason: ${reason}`);
+    console.log(`[KICK] Room: ${room ? room.id : 'null'}`);
+    console.log(`[KICK] ========================================`);
     try {
       const playerSocket = io.sockets.sockets.get(playerId);
       if (!playerSocket) {
-        console.log(`[KICK] Socket ${playerId} not found, already disconnected`);
+        console.log(`[KICK] ERROR: Socket ${playerId} not found in io.sockets.sockets!`);
+        console.log(`[KICK] Available sockets:`, Array.from(io.sockets.sockets.keys()));
         // Socket already disconnected, just remove from room and clean up
         const index = room.players.findIndex(p => p.id === playerId);
         if (index !== -1) {
@@ -1758,7 +1764,7 @@ io.on('connection', (socket) => {
         spamTracker.delete(playerId);
         return;
       }
-      console.log(`[KICK] Socket found for ${playerId}`);
+      console.log(`[KICK] ✓ Socket found for ${playerId}`);
       
       const index = room.players.findIndex(p => p.id === playerId);
       if (index !== -1) {
@@ -1794,14 +1800,25 @@ io.on('connection', (socket) => {
         // Disconnect socket - emit 'reason' event first, then disconnect
         // The client listens for 'reason' event to show "You have been kicked!" message
         try {
-          console.log(`[KICK] Emitting 'reason' event to ${playerId} with reason ${reason}`);
+          console.log(`[KICK] Step 1: Emitting 'reason' event to ${playerId} with reason ${reason}`);
           playerSocket.emit('reason', reason);
-          console.log(`[KICK] Disconnecting socket ${playerId} immediately...`);
-          // Disconnect immediately (don't use setTimeout)
+          console.log(`[KICK] Step 2: Reason event emitted successfully`);
+          
+          // Force disconnect immediately - don't wait
+          console.log(`[KICK] Step 3: Disconnecting socket ${playerId} immediately...`);
           playerSocket.disconnect(true);
-          console.log(`[KICK] Socket ${playerId} disconnected successfully`);
+          console.log(`[KICK] Step 4: Socket ${playerId} disconnected - DONE!`);
         } catch (error) {
-          console.error('[KICK] Error disconnecting socket:', error);
+          console.error('[KICK] ERROR in disconnect process:', error);
+          console.error('[KICK] Error stack:', error.stack);
+          // Force disconnect even on error
+          try {
+            console.log(`[KICK] Attempting force disconnect after error...`);
+            playerSocket.disconnect(true);
+            console.log(`[KICK] Force disconnect completed`);
+          } catch (e) {
+            console.error('[KICK] ERROR in force disconnect:', e);
+          }
         }
         
         // Clean up spam tracker AFTER disconnecting
