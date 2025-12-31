@@ -297,8 +297,11 @@
             ke.textContent = E("Invite your friends!");
             break;
         case p:
-            ke.textContent = E("Settings"),
-            a.querySelector("#select-pressure-sensitivity").value = (l && l.pressureSensitivity !== undefined) ? l.pressureSensitivity : 1
+            ke.textContent = E("Settings");
+            var pressureSensitivityEl = a.querySelector("#select-pressure-sensitivity");
+            if (pressureSensitivityEl) {
+                pressureSensitivityEl.value = (l && l.pressureSensitivity !== undefined) ? l.pressureSensitivity : 1
+            }
         }
     }
     function xe() {
@@ -542,21 +545,25 @@
             e.inputChanged()
         }
     });
-    for (var t = 0; t < Pe.length; t++) {
-        var _e = se("option");
-        _e.textContent = Pe[t].name,
-        _e.value = Pe[t].code,
-        ze.appendChild(_e)
+    if (ze) {
+        for (var t = 0; t < Pe.length; t++) {
+            var _e = se("option");
+            _e.textContent = Pe[t].name,
+            _e.value = Pe[t].code,
+            ze.appendChild(_e)
+        }
+        D(ze, "change", function(e) {
+            for (var t = void 0, n = 0; n < Pe.length; n++)
+                Pe[n].code == this.value && (t = Pe[n]);
+            null != t && Be.init(t)
+        })
     }
-    D(ze, "change", function(e) {
-        for (var t = void 0, n = 0; n < Pe.length; n++)
-            Pe[n].code == this.value && (t = Pe[n]);
-        null != t && Be.init(t)
-    }),
-    D([Ye, ze], "change", function(e) {
-        le(),
-        He()
-    }),
+    if (Ye && ze) {
+        D([Ye, ze], "change", function(e) {
+            le(),
+            He()
+        })
+    }
     D(Be.elements.main, "gesturestart gesturechange gestureend drag scroll", function(e) {
         return e.preventDefault(),
         !1
@@ -2679,19 +2686,30 @@
         R.playSound(xn),
         le()
     }),
-    D(g[p].querySelector("#select-pressure-sensitivity"), "change", function(e) {
-        l.pressureSensitivity = e.target.value,
-        le()
-    }),
-    D(g[p].querySelector("#select-mobile-chat-input"), "change", function(e) {
-        l.mobileChatLayout = e.target.value,
-        po(),
-        le()
-    }),
-    D(g[p].querySelector("#select-chat-bubbles"), "change", function(e) {
-        l.chatBubbles = e.target.value,
-        le()
-    }),
+    (function() {
+        var pressureEl = g[p].querySelector("#select-pressure-sensitivity");
+        if (pressureEl) {
+            D(pressureEl, "change", function(e) {
+                l.pressureSensitivity = e.target.value,
+                le()
+            })
+        }
+        var mobileChatInputEl = g[p].querySelector("#select-mobile-chat-input");
+        if (mobileChatInputEl) {
+            D(mobileChatInputEl, "change", function(e) {
+                l.mobileChatLayout = e.target.value,
+                po(),
+                le()
+            })
+        }
+        var chatBubblesEl = g[p].querySelector("#select-chat-bubbles");
+        if (chatBubblesEl) {
+            D(chatBubblesEl, "change", function(e) {
+                l.chatBubbles = e.target.value,
+                le()
+            })
+        }
+    })(),
     D(g[p].querySelector("button.reset"), "click", function() {
         for (var e = 0; e < u.length; e++) {
             var t = u[e];
@@ -2759,11 +2777,15 @@
     null == (n = d.getItem(n)) ? Vn : JSON.parse(n)),
     l.mobileChatLayout = e("mobileChatLayout", "bottom"),
     l.chatBubbles = e("chatBubbles", 0),
-    Ye.value = e("keyboard", ae ? 1 : 0),
-    ze.value = e("keyboardlayout", "en"),
+    Ye && (Ye.value = e("keyboard", ae ? 1 : 0)),
+    ze && (ze.value = e("keyboardlayout", "en")),
     He(),
-    g[p].querySelector("#select-chat-bubbles").value = l.chatBubbles,
-    g[p].querySelector("#select-mobile-chat-input").value = l.mobileChatLayout,
+    (function() {
+        var chatBubblesEl = g[p].querySelector("#select-chat-bubbles");
+        if (chatBubblesEl) chatBubblesEl.value = l.chatBubbles;
+        var mobileChatInputEl = g[p].querySelector("#select-mobile-chat-input");
+        if (mobileChatInputEl) mobileChatInputEl.value = l.mobileChatLayout;
+    })(),
     g[p].querySelector("#volume input").value = l.volume,
     R.setVolume(l.volume),
     po(),
