@@ -2417,29 +2417,30 @@
         // Use current player's guessed state, not e.guessed
         n = e.id == M || (currentPlayer.guessed === true),
         x == M || a.guessed || !n || o) && (a = (currentPlayer.flags & k) == k,
+        // ALWAYS start with normal color (black) - DEFAULT
         o = Me,
-        // Drawer's messages use GUESSED color (green, index 1) during DRAWING or WORD_CHOICE
-        // Check if this message is from the drawer: either e.id == M (M is set) or e.id == x (we're the drawer) during WORD_CHOICE/DRAWING
+        // Only apply special colors during DRAWING or WORD_CHOICE
         (function() {
-            // ALWAYS start with normal color
-            o = Me;
-            
-            // Only apply special colors during DRAWING or WORD_CHOICE
             if ((L.id == j || L.id == V)) {
                 var isDrawer = (e.id == M && M != -1) || (e.id == x && (L.id == j || L.id == V));
                 
                 if (isDrawer) {
-                    o = 1;  // Drawer's messages are green (color 1)
+                    // Drawer's messages are green
+                    o = 1;
                 } else {
-                    // For guessers: ONLY green if they've ACTUALLY guessed - get FRESH player object
+                    // For guessers: Get FRESH player object and check if they've ACTUALLY guessed
                     var freshPlayerCheck = W(e.id);
-                    if (freshPlayerCheck && freshPlayerCheck.guessed === true) {
-                        o = Ie;  // Guesser who has ACTUALLY guessed gets GUESSCHAT color (green)
+                    // ONLY green if guessed is EXPLICITLY true
+                    if (freshPlayerCheck && freshPlayerCheck.guessed === true && freshPlayerCheck.guessed !== false) {
+                        o = Ie;  // Green - they guessed correctly
+                    } else {
+                        o = Me;  // Black/normal - they haven't guessed yet
                     }
-                    // Otherwise stays Me (normal color) - this is the default
                 }
+            } else {
+                // Not in drawing/word choice - always normal color
+                o = Me;
             }
-            // If not in drawing/word choice, o stays Me (normal color)
         })(),
         a && (o = Ee),
         Ua(currentPlayer, $("text", t)),
