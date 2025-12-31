@@ -559,66 +559,53 @@ function checkSpam(socketId, message, room) {
     }
   }
   
-  // Check rate-based spam (messages per time window) - catches slower spam
+  // Check rate-based spam (messages per time window) - only for initial detection, not for warnings
   const messagesInWindow = tracker.recentMessages.length;
   const isRateSpam = messagesInWindow >= SPAM_CONFIG.RATE_SPAM_COUNT;
   
-  // Also check for consistent slow spam: if sending messages too frequently (even if not instant)
-  // This catches people spamming at a steady rate (e.g., every 500-1000ms)
-  let isSlowSpam = false;
-  if (tracker.recentMessages.length >= 3 && previousLastMessageTime > 0) {
-    const timeSinceLast = now - previousLastMessageTime;
-    // If sending messages consistently within 1 second of each other, and we have 3+ messages
-    // This catches slower but consistent spamming
-    if (timeSinceLast <= 1000 && messagesInWindow >= 3) {
-      isSlowSpam = true;
-    }
-  }
-  
-  // Determine if this message is spam (instant spam OR rate spam OR slow consistent spam)
-  const isSpam = isInstantSpam || isRateSpam || isSlowSpam;
-  
-  // Update last spam time if spam is detected
-  if (isSpam) {
+  // Update last spam time if instant spam is detected (only instant spam counts for warnings)
+  if (isInstantSpam) {
     tracker.lastSpamTime = now;
   }
   
   // Debug logging
-  if (tracker.warnings > 0 || isSpam) {
-    console.log(`[SPAM DEBUG] socketId: ${socketId}, warnings: ${tracker.warnings}, isInstantSpam: ${isInstantSpam}, isRateSpam: ${isRateSpam}, isSlowSpam: ${isSlowSpam}, messagesInWindow: ${messagesInWindow}, timeSinceLast: ${previousLastMessageTime > 0 ? now - previousLastMessageTime : 'N/A'}ms`);
+  if (tracker.warnings > 0 || isInstantSpam) {
+    console.log(`[SPAM DEBUG] socketId: ${socketId}, warnings: ${tracker.warnings}, isInstantSpam: ${isInstantSpam}, consecutiveInstantSpam: ${consecutiveInstantSpam}, messagesInWindow: ${messagesInWindow}, timeSinceLast: ${previousLastMessageTime > 0 ? now - previousLastMessageTime : 'N/A'}ms`);
   }
   
   if (tracker.warnings === 0) {
-    // First warning: show on instant spam OR rate spam OR slow spam
-    if (consecutiveInstantSpam >= SPAM_CONFIG.INSTANT_SPAM_COUNT - 1 || isRateSpam || isSlowSpam) {
+    // First warning: ONLY on instant spam (3 messages within threshold)
+    // consecutiveInstantSpam counts gaps, so 3 messages = 2 gaps
+    // We need consecutiveInstantSpam >= 2 to trigger on the 3rd message
+    if (consecutiveInstantSpam >= SPAM_CONFIG.INSTANT_SPAM_COUNT - 1) {
       shouldWarn = true;
       tracker.warnings = 1;
       tracker.lastWarningTime = now;
-      console.log(`[SPAM] First warning - instantSpam: ${consecutiveInstantSpam >= SPAM_CONFIG.INSTANT_SPAM_COUNT - 1}, rateSpam: ${isRateSpam}, slowSpam: ${isSlowSpam}, messagesInWindow: ${messagesInWindow}`);
+      console.log(`[SPAM] First warning - 3 instant spam messages detected, consecutiveInstantSpam: ${consecutiveInstantSpam}`);
       // DON'T clear - keep tracking for next check
     }
   } else if (tracker.warnings === 1) {
-    // Second warning: show on the next spam (instant or rate) after first warning
-    if (isSpam) {
+    // Second warning: ONLY on instant spam (not slow/rate spam)
+    if (isInstantSpam) {
       shouldWarn = true;
       tracker.warnings = 2;
       tracker.lastWarningTime = now;
-      console.log(`[SPAM] Second warning - isSpam: ${isSpam}`);
+      console.log(`[SPAM] Second warning - instant spam detected`);
     }
   } else if (tracker.warnings === 2) {
-    // Third warning: show on the next spam after second warning
-    if (isSpam) {
+    // Third warning: ONLY on instant spam (not slow/rate spam)
+    if (isInstantSpam) {
       shouldWarn = true;
       tracker.warnings = 3;
       tracker.lastWarningTime = now;
       console.log(`[SPAM] Third warning shown, warnings now = ${tracker.warnings}`);
-      // After showing 3rd warning, the NEXT spam message should kick (no warning)
+      // After showing 3rd warning, the NEXT instant spam message should kick (no warning)
     }
   } else if (tracker.warnings >= 3) {
-    // After 3 warnings, only kick if they CONTINUE spamming (instant or rate spam)
+    // After 3 warnings, only kick if they CONTINUE instant spamming
     // NO WARNING MESSAGE - just kick immediately
     // If they stopped spamming, warnings should have been reset above
-    if (isSpam) {
+    if (isInstantSpam) {
       shouldKick = true;
       console.log(`[SPAM] Kicking ${socketId} - continued instant spam after 3 warnings (no warning shown)`);
       // Kick the player immediately - owner can be kicked for spam
