@@ -404,15 +404,15 @@ app.post('/api/play', (req, res) => {
 // Anti-spam tracking per socket
 const spamTracker = new Map(); // socket.id -> { messages: [], lastMessage: timestamp, warnings: 0, lastWarningTime: 0 }
 
-// Anti-spam configuration (similar to skribbl.io)
+// Anti-spam configuration (exactly like skribbl.io)
 const SPAM_CONFIG = {
-  MAX_MESSAGES_PER_WINDOW: 5,      // Max 5 messages
-  TIME_WINDOW_MS: 3000,            // In 3 seconds
-  MIN_MESSAGE_INTERVAL_MS: 200,    // Minimum 200ms between messages
+  MAX_MESSAGES_PER_WINDOW: 6,      // Max 6 messages
+  TIME_WINDOW_MS: 5000,            // In 5 seconds
+  MIN_MESSAGE_INTERVAL_MS: 100,    // Minimum 100ms between messages
   MAX_MESSAGE_LENGTH: 200,         // Max 200 characters per message
-  DUPLICATE_THRESHOLD: 3,           // Max 3 duplicate messages in a row
+  DUPLICATE_THRESHOLD: 4,           // Max 4 duplicate messages in a row
   MAX_WARNINGS: 3,                  // Kick after 3 warnings
-  WARNING_COOLDOWN_MS: 10000       // 10 seconds between warnings
+  WARNING_COOLDOWN_MS: 0            // No cooldown - warn every time spam is detected
 };
 
 function checkSpam(socketId, message, room) {
@@ -463,30 +463,25 @@ function checkSpam(socketId, message, room) {
   }
   
   if (isSpam) {
-    // Check if we should warn or kick
-    const timeSinceLastWarning = now - tracker.lastWarningTime;
-    if (timeSinceLastWarning >= SPAM_CONFIG.WARNING_COOLDOWN_MS) {
-      tracker.warnings++;
-      tracker.lastWarningTime = now;
-      
-      if (tracker.warnings >= SPAM_CONFIG.MAX_WARNINGS) {
-        // Kick the player after 3 warnings
-        if (room) {
-          // Use setTimeout to kick after processing the message
+    // Always warn when spam is detected (no cooldown)
+    tracker.warnings++;
+    tracker.lastWarningTime = now;
+    
+    if (tracker.warnings >= SPAM_CONFIG.MAX_WARNINGS) {
+      // Kick the player after 3 warnings
+      if (room) {
+        // Kick immediately
+        const player = room.players.find(p => p.id === socketId);
+        if (player) {
           setTimeout(() => {
-            const player = room.players.find(p => p.id === socketId);
-            if (player) {
-              kickPlayer(room, socketId, 1); // Kick reason 1
-            }
-          }, 100);
-          return { isSpam: true, shouldKick: true };
+            kickPlayer(room, socketId, 1); // Kick reason 1
+          }, 50);
         }
-      } else {
-        // Send warning
-        return { isSpam: true, shouldWarn: true, warnings: tracker.warnings };
+        return { isSpam: true, shouldKick: true, shouldWarn: true, warnings: tracker.warnings };
       }
     }
-    return { isSpam: true, shouldWarn: false }; // Spam detected but in cooldown
+    // Send warning every time spam is detected
+    return { isSpam: true, shouldWarn: true, warnings: tracker.warnings };
   }
   
   // Add current message to tracker (only if not spam)

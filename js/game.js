@@ -2409,20 +2409,18 @@
             y("", t, f(o), !1);
             return;
         }
-        !e.muted && (o = ((a = W(x)).flags & k) == k,
-        // Get current player to check guessed state - use fresh player object
-        (function() {
-            var currentPlayer = W(e.id);
-            var currentPlayerGuessed = currentPlayer ? currentPlayer.guessed : false;
-            n = e.id == M || currentPlayerGuessed;
-        })(),
-        x == M || a.guessed || !n || o) && (a = (e.flags & k) == k,
+        // Get current player object FRESH - don't use e.guessed at all
+        var currentPlayer = W(e.id);
+        if (!currentPlayer) return; // Player doesn't exist, skip
+        
+        !currentPlayer.muted && (o = ((a = W(x)).flags & k) == k,
+        // Use current player's guessed state, not e.guessed
+        n = e.id == M || (currentPlayer.guessed === true),
+        x == M || a.guessed || !n || o) && (a = (currentPlayer.flags & k) == k,
         o = Me,
         // Drawer's messages use GUESSED color (green, index 1) during DRAWING or WORD_CHOICE
         // Check if this message is from the drawer: either e.id == M (M is set) or e.id == x (we're the drawer) during WORD_CHOICE/DRAWING
         (function() {
-            // Get the current player object to ensure we have the latest guessed state
-            var currentPlayer = W(e.id);
             var isDrawer = (e.id == M && M != -1) || (e.id == x && (L.id == j || L.id == V));
             
             // Only apply special colors during DRAWING or WORD_CHOICE
@@ -2430,12 +2428,8 @@
                 if (isDrawer) {
                     o = 1;  // Drawer's messages are green (color 1)
                 } else {
-                    // For guessers: only green if they've ACTUALLY guessed (strict check)
-                    var hasGuessed = false;
-                    if (currentPlayer && typeof currentPlayer.guessed !== 'undefined') {
-                        hasGuessed = currentPlayer.guessed === true;
-                    }
-                    if (hasGuessed) {
+                    // For guessers: ONLY green if they've ACTUALLY guessed (strict check on current player)
+                    if (currentPlayer.guessed === true) {
                         o = Ie;  // Guesser who has ACTUALLY guessed gets GUESSCHAT color (green)
                     } else {
                         o = Me;  // Normal chat color for guessers who haven't guessed
@@ -2447,8 +2441,8 @@
             }
         })(),
         a && (o = Ee),
-        Ua(e, $("text", t)),
-        y(e.name, t, f(o), !1))
+        Ua(currentPlayer, $("text", t)),
+        y(currentPlayer.name, t, f(o), !1))
     }
     function Ua(e, t) {
         e.bubble && (clearTimeout(e.bubble.timeout),
