@@ -411,9 +411,8 @@ const SPAM_CONFIG = {
   MIN_MESSAGE_INTERVAL_MS: 200,    // Minimum 200ms between messages (less strict to allow typing)
   MAX_MESSAGE_LENGTH: 200,         // Max 200 characters per message
   DUPLICATE_THRESHOLD: 3,           // Max 3 duplicate messages in a row
-  MAX_WARNINGS: 5,                  // Kick after 5 warnings (give more chances)
-  WARNING_COOLDOWN_MS: 200,        // 200ms cooldown - show warnings very frequently
-  INITIAL_WARNING_COOLDOWN_MS: 0   // No cooldown for first 3 warnings
+  MAX_WARNINGS: 2,                  // Kick after 2 warnings (show a few errors, then kick)
+  WARNING_COOLDOWN_MS: 0            // No cooldown - show warnings immediately
 };
 
 function checkSpam(socketId, message, room) {
@@ -466,16 +465,14 @@ function checkSpam(socketId, message, room) {
   }
   
   if (isSpam) {
-    // For first 3 warnings, no cooldown - show warnings immediately
-    // After that, use short cooldown to show warnings frequently
-    const warningCooldown = tracker.warnings < 3 ? SPAM_CONFIG.INITIAL_WARNING_COOLDOWN_MS : SPAM_CONFIG.WARNING_COOLDOWN_MS;
-    const shouldWarn = (now - tracker.lastWarningTime) >= warningCooldown;
-    
-    // Always track spam messages to accumulate warnings
-    tracker.messages.push(now);
+    // Update last message tracking for duplicate detection (but don't add to messages array since we're blocking)
     tracker.lastMessage = now;
     tracker.lastMessageText = message;
     
+    // Show warnings immediately (no cooldown)
+    const shouldWarn = (now - tracker.lastWarningTime) >= SPAM_CONFIG.WARNING_COOLDOWN_MS;
+    
+    // Increment warning count immediately when spam is detected
     if (shouldWarn) {
       tracker.warnings++;
       tracker.lastWarningTime = now;
@@ -483,11 +480,11 @@ function checkSpam(socketId, message, room) {
     
     // Check if we should kick (after enough warnings)
     if (tracker.warnings >= SPAM_CONFIG.MAX_WARNINGS) {
-      // Kick the player after MAX_WARNINGS warnings
+      // Kick the player immediately after MAX_WARNINGS warnings
       if (room) {
         const player = room.players.find(p => p.id === socketId);
         if (player) {
-          // Kick immediately but with error handling
+          // Kick immediately
           setImmediate(() => {
             try {
               kickPlayer(room, socketId, 1); // Kick reason 1
@@ -496,11 +493,14 @@ function checkSpam(socketId, message, room) {
             }
           });
         }
-        return { isSpam: true, shouldKick: true, shouldWarn: true, warnings: tracker.warnings };
+        // Block the message and return kick status
+        return { isSpam: true, shouldKick: true, shouldWarn: false, warnings: tracker.warnings };
       }
     }
-    // Always show warning if spam detected (respect cooldown) - MESSAGE STILL GOES THROUGH
-    return { isSpam: true, shouldWarn: shouldWarn, warnings: tracker.warnings };
+    
+    // Block spam messages - don't let them through
+    // Only show warning if we haven't reached kick threshold yet
+    return { isSpam: true, shouldWarn: shouldWarn, warnings: tracker.warnings, blockMessage: true };
   }
   
   // Not spam - add message to tracker and reset duplicate count
@@ -843,10 +843,9 @@ io.on('connection', (socket) => {
                 id: PACKET.SPAM,
                 data: null
               });
-              // Still process the guess (show text) but with warning
-            } else {
-              // Spam detected but in cooldown - still process but don't warn again
             }
+            // Block spam messages - don't process the guess
+            return;
           }
           
           if (!player.guessed) {
@@ -985,10 +984,9 @@ io.on('connection', (socket) => {
               id: PACKET.SPAM,
               data: null
             });
-            // Still process the message (show text) but with warning
-          } else {
-            // Spam detected but in cooldown - still process but don't warn again
           }
+          // Block spam messages - don't process the chat message
+          return;
         }
         
         if (room.state === GAME_STATE.DRAWING || room.state === GAME_STATE.WORD_CHOICE) {
