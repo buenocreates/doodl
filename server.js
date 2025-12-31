@@ -438,8 +438,13 @@ function checkSpam(socketId, message, room) {
     }
   }
   
-  // Update last message time AFTER checking
+  // Update last message time AFTER checking (so next message can compare against this one)
   tracker.lastMessageTime = now;
+  
+  // Debug logging
+  if (tracker.warnings > 0) {
+    console.log(`[SPAM DEBUG] socketId: ${socketId}, warnings: ${tracker.warnings}, isInstantSpam: ${isInstantSpam}, timeSinceLast: ${previousLastMessageTime > 0 ? now - previousLastMessageTime : 'N/A'}ms, previousLastMessageTime: ${previousLastMessageTime}`);
+  }
   
   // Add current message to recent messages
   tracker.recentMessages.push(now);
@@ -476,33 +481,19 @@ function checkSpam(socketId, message, room) {
   } else if (tracker.warnings < SPAM_CONFIG.MAX_WARNINGS) {
     // After first warning: each instant spam message triggers next warning
     if (isInstantSpam) {
-      shouldWarn = true;
       tracker.warnings++;
       tracker.lastWarningTime = now;
-      // DON'T clear - keep tracking for next check
+      shouldWarn = true; // Always show warning
       
-      // Check if we should kick after this warning
-      if (tracker.warnings >= SPAM_CONFIG.MAX_WARNINGS) {
-        shouldKick = true;
-        // Kick the player immediately
-        if (room) {
-          const player = room.players.find(p => p.id === socketId);
-          if (player) {
-            setImmediate(() => {
-              try {
-                kickPlayer(room, socketId, 1); // Kick reason 1
-              } catch (error) {
-                console.error('Error kicking player:', error);
-              }
-            });
-          }
-        }
-      }
+      console.log(`[SPAM] Warning ${tracker.warnings} for ${socketId}, timeSinceLast: ${now - previousLastMessageTime}ms`);
+    } else {
+      console.log(`[SPAM] No warning for ${socketId}, warnings: ${tracker.warnings}, isInstantSpam: ${isInstantSpam}, timeSinceLast: ${previousLastMessageTime > 0 ? now - previousLastMessageTime : 'N/A'}ms`);
     }
   } else {
-    // Already at max warnings, any instant spam = kick
+    // Already at max warnings (3), any instant spam = kick
     if (isInstantSpam) {
       shouldKick = true;
+      console.log(`[SPAM] Kicking ${socketId} - already at max warnings (${tracker.warnings}), instant spam detected`);
       // Kick the player immediately
       if (room) {
         const player = room.players.find(p => p.id === socketId);
@@ -516,6 +507,8 @@ function checkSpam(socketId, message, room) {
           });
         }
       }
+    } else {
+      console.log(`[SPAM] No kick for ${socketId}, warnings: ${tracker.warnings}, isInstantSpam: ${isInstantSpam}, timeSinceLast: ${previousLastMessageTime > 0 ? now - previousLastMessageTime : 'N/A'}ms`);
     }
   }
   
