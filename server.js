@@ -413,6 +413,94 @@ const SPAM_CONFIG = {
   WARNING_RESET_TIME_MS: 5000       // Reset warnings if no spam for 5 seconds
 };
 
+function kickPlayer(room, playerId, reason) {
+  console.log(`[KICK] ========================================`);
+  console.log(`[KICK] kickPlayer called for ${playerId}, reason: ${reason}`);
+  console.log(`[KICK] Room: ${room ? room.id : 'null'}`);
+  console.log(`[KICK] ========================================`);
+  try {
+    const playerSocket = io.sockets.sockets.get(playerId);
+    if (!playerSocket) {
+      console.log(`[KICK] ERROR: Socket ${playerId} not found in io.sockets.sockets!`);
+      console.log(`[KICK] Available sockets:`, Array.from(io.sockets.sockets.keys()));
+      // Socket already disconnected, just remove from room and clean up
+      const index = room.players.findIndex(p => p.id === playerId);
+      if (index !== -1) {
+        room.players.splice(index, 1);
+      }
+      spamTracker.delete(playerId);
+      return;
+    }
+    console.log(`[KICK] ✓ Socket found for ${playerId}`);
+    
+    const index = room.players.findIndex(p => p.id === playerId);
+    if (index !== -1) {
+      const kickedPlayer = room.players[index];
+      room.players.splice(index, 1);
+      
+      // Send leave event to room first (before disconnecting)
+      try {
+        io.to(room.id).emit('data', {
+          id: PACKET.LEAVE,
+          data: {
+            id: playerId,
+            reason: reason
+          }
+        });
+      } catch (error) {
+        console.error('Error sending leave event:', error);
+      }
+      
+      // Send message to chat (system message - no player ID)
+      try {
+        io.to(room.id).emit('data', {
+          id: PACKET.CHAT,
+          data: {
+            id: null,  // System message - no player name prefix
+            msg: reason === 1 ? `${kickedPlayer.name} has been kicked!` : `${kickedPlayer.name} has been banned!`
+          }
+        });
+      } catch (error) {
+        console.error('Error sending kick message:', error);
+      }
+      
+      // Disconnect socket - emit 'reason' event first, then disconnect
+      // The client listens for 'reason' event to show "You have been kicked!" message
+      try {
+        console.log(`[KICK] Step 1: Emitting 'reason' event to ${playerId} with reason ${reason}`);
+        playerSocket.emit('reason', reason);
+        console.log(`[KICK] Step 2: Reason event emitted successfully`);
+        
+        // Force disconnect immediately - don't wait
+        console.log(`[KICK] Step 3: Disconnecting socket ${playerId} immediately...`);
+        playerSocket.disconnect(true);
+        console.log(`[KICK] Step 4: Socket ${playerId} disconnected - DONE!`);
+      } catch (error) {
+        console.error('[KICK] ERROR in disconnect process:', error);
+        console.error('[KICK] Error stack:', error.stack);
+        // Force disconnect even on error
+        try {
+          console.log(`[KICK] Attempting force disconnect after error...`);
+          playerSocket.disconnect(true);
+          console.log(`[KICK] Force disconnect completed`);
+        } catch (e) {
+          console.error('[KICK] ERROR in force disconnect:', e);
+        }
+      }
+      
+      // Clean up spam tracker AFTER disconnecting
+      spamTracker.delete(playerId);
+    } else {
+      // Player not found in room, just clean up
+      spamTracker.delete(playerId);
+    }
+  } catch (error) {
+    console.error('Error in kickPlayer:', error);
+    // Clean up spam tracker even on error
+    spamTracker.delete(playerId);
+  }
+}
+
 function checkSpam(socketId, message, room) {
   const now = Date.now();
   let tracker = spamTracker.get(socketId);
@@ -1739,94 +1827,6 @@ io.on('connection', (socket) => {
         });
       }
     }, 1000);
-  }
-  
-  function kickPlayer(room, playerId, reason) {
-    console.log(`[KICK] ========================================`);
-    console.log(`[KICK] kickPlayer called for ${playerId}, reason: ${reason}`);
-    console.log(`[KICK] Room: ${room ? room.id : 'null'}`);
-    console.log(`[KICK] ========================================`);
-    try {
-      const playerSocket = io.sockets.sockets.get(playerId);
-      if (!playerSocket) {
-        console.log(`[KICK] ERROR: Socket ${playerId} not found in io.sockets.sockets!`);
-        console.log(`[KICK] Available sockets:`, Array.from(io.sockets.sockets.keys()));
-        // Socket already disconnected, just remove from room and clean up
-        const index = room.players.findIndex(p => p.id === playerId);
-        if (index !== -1) {
-          room.players.splice(index, 1);
-        }
-        spamTracker.delete(playerId);
-        return;
-      }
-      console.log(`[KICK] ✓ Socket found for ${playerId}`);
-      
-      const index = room.players.findIndex(p => p.id === playerId);
-      if (index !== -1) {
-        const kickedPlayer = room.players[index];
-        room.players.splice(index, 1);
-        
-        // Send leave event to room first (before disconnecting)
-        try {
-          io.to(room.id).emit('data', {
-            id: PACKET.LEAVE,
-            data: {
-              id: playerId,
-              reason: reason
-            }
-          });
-        } catch (error) {
-          console.error('Error sending leave event:', error);
-        }
-        
-        // Send message to chat (system message - no player ID)
-        try {
-          io.to(room.id).emit('data', {
-            id: PACKET.CHAT,
-            data: {
-              id: null,  // System message - no player name prefix
-              msg: reason === 1 ? `${kickedPlayer.name} has been kicked!` : `${kickedPlayer.name} has been banned!`
-            }
-          });
-        } catch (error) {
-          console.error('Error sending kick message:', error);
-        }
-        
-        // Disconnect socket - emit 'reason' event first, then disconnect
-        // The client listens for 'reason' event to show "You have been kicked!" message
-        try {
-          console.log(`[KICK] Step 1: Emitting 'reason' event to ${playerId} with reason ${reason}`);
-          playerSocket.emit('reason', reason);
-          console.log(`[KICK] Step 2: Reason event emitted successfully`);
-          
-          // Force disconnect immediately - don't wait
-          console.log(`[KICK] Step 3: Disconnecting socket ${playerId} immediately...`);
-          playerSocket.disconnect(true);
-          console.log(`[KICK] Step 4: Socket ${playerId} disconnected - DONE!`);
-        } catch (error) {
-          console.error('[KICK] ERROR in disconnect process:', error);
-          console.error('[KICK] Error stack:', error.stack);
-          // Force disconnect even on error
-          try {
-            console.log(`[KICK] Attempting force disconnect after error...`);
-            playerSocket.disconnect(true);
-            console.log(`[KICK] Force disconnect completed`);
-          } catch (e) {
-            console.error('[KICK] ERROR in force disconnect:', e);
-          }
-        }
-        
-        // Clean up spam tracker AFTER disconnecting
-        spamTracker.delete(playerId);
-      } else {
-        // Player not found in room, just clean up
-        spamTracker.delete(playerId);
-      }
-    } catch (error) {
-      console.error('Error in kickPlayer:', error);
-      // Clean up spam tracker even on error
-      spamTracker.delete(playerId);
-    }
   }
   
   // Handle votekick logic (like skribbl.io)
