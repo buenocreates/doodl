@@ -438,7 +438,8 @@ function kickPlayer(room, playerId, reason) {
       const kickedPlayer = room.players[index];
       room.players.splice(index, 1);
       
-      // Send leave event to room first (before disconnecting)
+      // Send leave event to room (this will show the kick message to other players)
+      // Don't send a separate chat message - the LEAVE packet with reason already handles it
       try {
         io.to(room.id).emit('data', {
           id: PACKET.LEAVE,
@@ -449,19 +450,6 @@ function kickPlayer(room, playerId, reason) {
         });
       } catch (error) {
         console.error('Error sending leave event:', error);
-      }
-      
-      // Send message to chat (system message - no player ID)
-      try {
-        io.to(room.id).emit('data', {
-          id: PACKET.CHAT,
-          data: {
-            id: null,  // System message - no player name prefix
-            msg: reason === 1 ? `${kickedPlayer.name} has been kicked!` : `${kickedPlayer.name} has been banned!`
-          }
-        });
-      } catch (error) {
-        console.error('Error sending kick message:', error);
       }
       
       // Disconnect socket - emit 'reason' event first, then disconnect

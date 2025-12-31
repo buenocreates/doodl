@@ -1775,17 +1775,37 @@
             S.emit("login", e)
         }),
         S.on("reason", function(e) {
-            o = e
+            o = e;
+            // Show kick/ban modal immediately when reason is received
+            if (e == 1) {
+                // Kicked
+                qe(ve, E("You have been kicked!"));
+                // Redirect to home after showing modal
+                setTimeout(function() {
+                    h.location.href = "/"
+                }, 1500);
+            } else if (e == 2) {
+                // Banned
+                qe(ve, E("You have been banned!"));
+                // Redirect to home after showing modal
+                setTimeout(function() {
+                    h.location.href = "/"
+                }, 1500);
+            }
         }),
         S.on("disconnect", function(e) {
             console.log("socket disconnect: " + e);
-            // Only redirect to home if we're not in a private room that just changed owners
-            // Check if we're in LOBBY state (owner change scenario) - don't redirect in that case
-            if (L.id != J) {
-                // Not in lobby - this is a real disconnect, redirect to home
-            h.location.href = "/"
+            // If we have a reason (kick/ban), always redirect regardless of lobby state
+            if (o == 1 || o == 2) {
+                // Already handled in reason handler, but ensure redirect if disconnect happens first
+                if (h.location.pathname != "/") {
+                    h.location.href = "/"
+                }
+            } else if (L.id != J) {
+                // Not in lobby and not kicked - this is a real disconnect, redirect to home
+                h.location.href = "/"
             }
-            // If in lobby, stay on the page (owner change scenario)
+            // If in lobby and not kicked, stay on the page (owner change scenario)
         }),
         S.on("connect_error", function(e) {
             console.log("connect_error: " + e.message);
