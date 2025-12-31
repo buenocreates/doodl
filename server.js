@@ -431,6 +431,9 @@ function checkSpam(socketId, message, room) {
     spamTracker.set(socketId, tracker);
   }
   
+  // Remove messages older than the time window FIRST
+  tracker.messages = tracker.messages.filter(msgTime => now - msgTime < SPAM_CONFIG.TIME_WINDOW_MS);
+  
   let isSpam = false;
   
   // Check message length
@@ -449,6 +452,7 @@ function checkSpam(socketId, message, room) {
   // Check for duplicate messages
   if (message === tracker.lastMessageText) {
     tracker.duplicateCount++;
+    // Only count as spam if 3+ duplicates in a row
     if (tracker.duplicateCount >= SPAM_CONFIG.DUPLICATE_THRESHOLD) {
       isSpam = true;
     }
@@ -456,13 +460,15 @@ function checkSpam(socketId, message, room) {
     tracker.duplicateCount = 0;
   }
   
-  // Remove messages older than the time window
-  tracker.messages = tracker.messages.filter(msgTime => now - msgTime < SPAM_CONFIG.TIME_WINDOW_MS);
-  
-  // Check if too many messages in the time window
+  // Check if too many messages in the time window (before adding current one)
   if (tracker.messages.length >= SPAM_CONFIG.MAX_MESSAGES_PER_WINDOW) {
     isSpam = true;
   }
+  
+  // ALWAYS track the message (so it goes through regardless of spam detection)
+  tracker.messages.push(now);
+  tracker.lastMessage = now;
+  tracker.lastMessageText = message;
   
   if (isSpam) {
     // Show warnings immediately (no cooldown)
@@ -472,6 +478,8 @@ function checkSpam(socketId, message, room) {
     if (shouldWarn) {
       tracker.warnings++;
       tracker.lastWarningTime = now;
+      // Reset duplicate count when warning is shown so user can continue typing
+      tracker.duplicateCount = 0;
     }
     
     // Check if we should kick (after enough warnings)
@@ -494,24 +502,11 @@ function checkSpam(socketId, message, room) {
       }
     }
     
-    // Spam detected but not kicked yet - let message through but show warning
-    // Still track the message so spam detection continues to work
-    tracker.messages.push(now);
-    tracker.lastMessage = now;
-    tracker.lastMessageText = message;
-    
+    // Spam detected but not kicked yet - message already tracked, just show warning
     return { isSpam: true, shouldWarn: shouldWarn, warnings: tracker.warnings };
   }
   
-  // Not spam - add message to tracker and reset duplicate count
-  tracker.messages.push(now);
-  tracker.lastMessage = now;
-  // Reset duplicate count when message changes
-  if (message !== tracker.lastMessageText) {
-    tracker.duplicateCount = 0;
-  }
-  tracker.lastMessageText = message;
-  
+  // Not spam - duplicate count already reset above if message changed
   return { isSpam: false };
 }
 
