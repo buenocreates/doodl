@@ -470,38 +470,50 @@ function checkSpam(socketId, message, room) {
   }
   
   if (tracker.warnings === 0) {
-    // First warning: need 3 consecutive instant spam messages
-    // consecutiveInstantSpam counts the gaps, so 3 messages = 2 gaps, we need 2+ consecutive
+    // First warning: show on the 3rd instant spam message
+    // consecutiveInstantSpam counts the gaps, so 3 messages = 2 gaps, we need exactly 2 consecutive
     if (consecutiveInstantSpam >= SPAM_CONFIG.INSTANT_SPAM_COUNT - 1) {
       shouldWarn = true;
       tracker.warnings = 1;
       tracker.lastWarningTime = now;
       // DON'T clear - keep tracking for next check
     }
-  } else if (tracker.warnings < SPAM_CONFIG.MAX_WARNINGS) {
-    // After first warning: each instant spam message triggers next warning
+  } else if (tracker.warnings === 1) {
+    // Second warning: show on the next instant spam after first warning
     if (isInstantSpam) {
-      tracker.warnings++;
+      shouldWarn = true;
+      tracker.warnings = 2;
       tracker.lastWarningTime = now;
-      shouldWarn = true; // Always show warning
-      
-      console.log(`[SPAM] Warning ${tracker.warnings} for ${socketId}, timeSinceLast: ${now - previousLastMessageTime}ms`);
-      
-      // If we just hit max warnings (3), don't kick yet - wait for next instant spam
-      // The next message will trigger the kick in the else block below
-    } else {
-      console.log(`[SPAM] No warning for ${socketId}, warnings: ${tracker.warnings}, isInstantSpam: ${isInstantSpam}, timeSinceLast: ${previousLastMessageTime > 0 ? now - previousLastMessageTime : 'N/A'}ms`);
     }
-  } else {
+  } else if (tracker.warnings === 2) {
+    // Third warning: show on the next instant spam after second warning
+    if (isInstantSpam) {
+      shouldWarn = true;
+      tracker.warnings = 3;
+      tracker.lastWarningTime = now;
+    }
+  } else if (tracker.warnings >= SPAM_CONFIG.MAX_WARNINGS) {
     // Already at max warnings (3), any instant spam = kick immediately
     if (isInstantSpam) {
       shouldKick = true;
       console.log(`[SPAM] Kicking ${socketId} - already at max warnings (${tracker.warnings}), instant spam detected`);
-      // Kick the player immediately
+      // Kick the player immediately - owner can be kicked for spam
       if (room) {
         const player = room.players.find(p => p.id === socketId);
         if (player) {
-          // Kick immediately (don't use setImmediate, do it synchronously)
+          // Transfer ownership if owner is being kicked
+          if (room.owner === socketId && room.players.length > 1) {
+            const remainingPlayers = room.players.filter(p => p.id !== socketId);
+            if (remainingPlayers.length > 0) {
+              room.owner = remainingPlayers[0].id;
+              // Notify room of owner change
+              io.to(room.id).emit('data', {
+                id: PACKET.OWNER,
+                data: room.owner
+              });
+            }
+          }
+          // Kick immediately
           try {
             kickPlayer(room, socketId, 1); // Kick reason 1
           } catch (error) {
