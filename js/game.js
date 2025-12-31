@@ -1776,17 +1776,29 @@
         }),
         S.on("reason", function(e) {
             o = e;
-            // Show kick/ban modal immediately when reason is received
-            if (e == 1) {
-                // Kicked
-                qe(ve, E("You have been kicked!"));
-                // Redirect to home after showing modal
-                setTimeout(function() {
-                    h.location.href = "/"
-                }, 1500);
-            } else if (e == 2) {
-                // Banned
-                qe(ve, E("You have been banned!"));
+            // IMMEDIATELY disable all input when kicked/banned
+            if (e == 1 || e == 2) {
+                // Disable both input fields immediately
+                if (_n[0]) {
+                    _n[0].disabled = true;
+                    _n[0].readOnly = true;
+                    _n[0].setAttribute("readonly", "");
+                    _n[0].setAttribute("disabled", "");
+                }
+                if (_n[1]) {
+                    _n[1].disabled = true;
+                    _n[1].readOnly = true;
+                    _n[1].setAttribute("readonly", "");
+                    _n[1].setAttribute("disabled", "");
+                }
+                // Show kick/ban modal
+                if (e == 1) {
+                    // Kicked
+                    qe(ve, E("You have been kicked!"));
+                } else if (e == 2) {
+                    // Banned
+                    qe(ve, E("You have been banned!"));
+                }
                 // Redirect to home after showing modal
                 setTimeout(function() {
                     h.location.href = "/"

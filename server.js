@@ -438,8 +438,33 @@ function kickPlayer(room, playerId, reason) {
       const kickedPlayer = room.players[index];
       room.players.splice(index, 1);
       
-      // Send leave event to room (this will show the kick message to other players)
-      // Don't send a separate chat message - the LEAVE packet with reason already handles it
+      // CRITICAL: Emit 'reason' event FIRST, then disconnect IMMEDIATELY
+      // This ensures the client receives the reason and can disable input before disconnect
+      try {
+        console.log(`[KICK] Step 1: Emitting 'reason' event to ${playerId} with reason ${reason}`);
+        playerSocket.emit('reason', reason);
+        console.log(`[KICK] Step 2: Reason event emitted successfully`);
+      } catch (error) {
+        console.error('[KICK] ERROR emitting reason event:', error);
+      }
+      
+      // Disconnect IMMEDIATELY after emitting reason - this prevents any further messages
+      try {
+        console.log(`[KICK] Step 3: Disconnecting socket ${playerId} immediately...`);
+        playerSocket.disconnect(true);
+        console.log(`[KICK] Step 4: Socket ${playerId} disconnected - DONE!`);
+      } catch (error) {
+        console.error('[KICK] ERROR in disconnect process:', error);
+        // Force disconnect even on error
+        try {
+          playerSocket.disconnect(true);
+        } catch (e) {
+          console.error('[KICK] ERROR in force disconnect:', e);
+        }
+      }
+      
+      // Send leave event to room AFTER disconnecting (so kicked player doesn't receive it)
+      // This will show the kick message to other players
       try {
         io.to(room.id).emit('data', {
           id: PACKET.LEAVE,
@@ -450,30 +475,6 @@ function kickPlayer(room, playerId, reason) {
         });
       } catch (error) {
         console.error('Error sending leave event:', error);
-      }
-      
-      // Disconnect socket - emit 'reason' event first, then disconnect
-      // The client listens for 'reason' event to show "You have been kicked!" message
-      try {
-        console.log(`[KICK] Step 1: Emitting 'reason' event to ${playerId} with reason ${reason}`);
-        playerSocket.emit('reason', reason);
-        console.log(`[KICK] Step 2: Reason event emitted successfully`);
-        
-        // Force disconnect immediately - don't wait
-        console.log(`[KICK] Step 3: Disconnecting socket ${playerId} immediately...`);
-        playerSocket.disconnect(true);
-        console.log(`[KICK] Step 4: Socket ${playerId} disconnected - DONE!`);
-      } catch (error) {
-        console.error('[KICK] ERROR in disconnect process:', error);
-        console.error('[KICK] Error stack:', error.stack);
-        // Force disconnect even on error
-        try {
-          console.log(`[KICK] Attempting force disconnect after error...`);
-          playerSocket.disconnect(true);
-          console.log(`[KICK] Force disconnect completed`);
-        } catch (e) {
-          console.error('[KICK] ERROR in force disconnect:', e);
-        }
       }
       
       // Clean up spam tracker AFTER disconnecting
@@ -504,17 +505,6 @@ function checkSpam(socketId, message, room) {
     spamTracker.set(socketId, tracker);
   }
   
-  // Reset warnings if user stopped spamming (no spam for WARNING_RESET_TIME_MS)
-  if (tracker.warnings > 0 && tracker.lastSpamTime > 0) {
-    const timeSinceLastSpam = now - tracker.lastSpamTime;
-    if (timeSinceLastSpam > SPAM_CONFIG.WARNING_RESET_TIME_MS) {
-      // User stopped spamming - reset warnings
-      tracker.warnings = 0;
-      tracker.lastWarningTime = 0;
-      tracker.recentMessages = [];
-    }
-  }
-  
   // Save previous last message time BEFORE updating
   const previousLastMessageTime = tracker.lastMessageTime;
   
@@ -524,7 +514,21 @@ function checkSpam(socketId, message, room) {
     const timeSinceLastMessage = now - previousLastMessageTime;
     if (timeSinceLastMessage <= SPAM_CONFIG.INSTANT_SPAM_THRESHOLD_MS) {
       isInstantSpam = true;
-      tracker.lastSpamTime = now; // Update last spam time
+      tracker.lastSpamTime = now; // Update last spam time when spam is detected
+    }
+  }
+  
+  // Reset warnings if user stopped spamming (no spam for WARNING_RESET_TIME_MS)
+  // Check this AFTER determining if current message is spam, but BEFORE processing warnings
+  if (tracker.warnings > 0 && tracker.lastSpamTime > 0) {
+    const timeSinceLastSpam = now - tracker.lastSpamTime;
+    if (timeSinceLastSpam > SPAM_CONFIG.WARNING_RESET_TIME_MS) {
+      // User stopped spamming for 5+ seconds - reset warnings
+      console.log(`[SPAM] Resetting warnings for ${socketId} - no spam for ${timeSinceLastSpam}ms`);
+      tracker.warnings = 0;
+      tracker.lastWarningTime = 0;
+      tracker.recentMessages = [];
+      tracker.lastSpamTime = 0; // Reset this too
     }
   }
   
@@ -585,27 +589,35 @@ function checkSpam(socketId, message, room) {
       // After showing 3rd warning, the NEXT message should kick
     }
   } else if (tracker.warnings >= 3) {
-    // After 3 warnings, ANY message = kick immediately (no conditions)
-    shouldKick = true;
-    // Kick the player immediately - owner can be kicked for spam
-    if (room) {
-      const player = room.players.find(p => p.id === socketId);
-      if (player) {
-        // Transfer ownership if owner is being kicked
-        if (room.owner === socketId && room.players.length > 1) {
-          const remainingPlayers = room.players.filter(p => p.id !== socketId);
-          if (remainingPlayers.length > 0) {
-            room.owner = remainingPlayers[0].id;
-            // Notify room of owner change
-            io.to(room.id).emit('data', {
-              id: PACKET.OWNER,
-              data: room.owner
-            });
+    // After 3 warnings, only kick if they CONTINUE spamming (instant spam)
+    // If they stopped spamming, warnings should have been reset above
+    if (isInstantSpam) {
+      shouldKick = true;
+      console.log(`[SPAM] Kicking ${socketId} - continued instant spam after 3 warnings`);
+      // Kick the player immediately - owner can be kicked for spam
+      if (room) {
+        const player = room.players.find(p => p.id === socketId);
+        if (player) {
+          // Transfer ownership if owner is being kicked
+          if (room.owner === socketId && room.players.length > 1) {
+            const remainingPlayers = room.players.filter(p => p.id !== socketId);
+            if (remainingPlayers.length > 0) {
+              room.owner = remainingPlayers[0].id;
+              // Notify room of owner change
+              io.to(room.id).emit('data', {
+                id: PACKET.OWNER,
+                data: room.owner
+              });
+            }
           }
+          // Kick immediately - call synchronously
+          kickPlayer(room, socketId, 1); // Kick reason 1
         }
-        // Kick immediately - call synchronously
-        kickPlayer(room, socketId, 1); // Kick reason 1
       }
+    } else {
+      // Not instant spam after 3 warnings - this shouldn't happen if reset works,
+      // but if it does, just log it (warnings should reset on next message if 5+ seconds passed)
+      console.log(`[SPAM] User ${socketId} has 3 warnings but sent non-instant message - warnings should reset if 5+ seconds passed`);
     }
   }
   
