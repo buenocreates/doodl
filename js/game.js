@@ -1775,9 +1775,11 @@
             S.emit("login", e)
         }),
         S.on("reason", function(e) {
+            console.log("[REASON EVENT] Received reason:", e);
             o = e;
             // IMMEDIATELY disable all input when kicked/banned
             if (e == 1 || e == 2) {
+                console.log("[REASON EVENT] Kicked/banned, storing reason and redirecting");
                 // Disable both input fields immediately
                 if (_n[0]) {
                     _n[0].disabled = true;
@@ -1794,10 +1796,15 @@
                 // Store reason in localStorage to show message on home page
                 try {
                     h.localStorage.setItem("kickReason", e.toString());
+                    console.log("[REASON EVENT] Stored kickReason in localStorage:", e.toString());
                 } catch (err) {
-                    console.log("Could not store kick reason:", err);
+                    console.log("[REASON EVENT] Could not store kick reason:", err);
                 }
+                // Also store in window for immediate access
+                h._kickMessage = e.toString();
+                console.log("[REASON EVENT] Stored _kickMessage:", h._kickMessage);
                 // Redirect to home IMMEDIATELY (no delay, no modal)
+                console.log("[REASON EVENT] Redirecting to /?kicked=" + e);
                 h.location.href = "/?kicked=" + e;
             }
         }),
@@ -2064,19 +2071,33 @@
             }, 300);
         });
         // Check for kick message on page load (in case event was already dispatched)
-        setTimeout(function() {
-            if (h._kickMessage) {
-                qe(ve, h._kickMessage);
-                h._kickMessage = null;
-            }
-            // Also check URL parameter directly
+        // Use multiple checks to ensure we catch it
+        function checkAndShowKickMessage() {
+            console.log("[KICK CHECK] Checking for kick message...");
             var urlParams = new URLSearchParams(h.location.search);
             var kicked = urlParams.get('kicked');
             var kickReason = null;
             try {
                 kickReason = h.localStorage.getItem('kickReason');
-            } catch (e) {}
+                console.log("[KICK CHECK] localStorage kickReason:", kickReason);
+            } catch (e) {
+                console.log("[KICK CHECK] Could not access localStorage:", e);
+            }
+            console.log("[KICK CHECK] URL kicked param:", kicked);
+            console.log("[KICK CHECK] window._kickMessage:", h._kickMessage);
+            
+            if (h._kickMessage) {
+                console.log("[KICK CHECK] Found _kickMessage, showing modal");
+                var message = h._kickMessage == '1' ? E("You have been kicked!") : (h._kickMessage == '2' ? E("You have been banned!") : '');
+                if (message) {
+                    qe(ve, message);
+                    h._kickMessage = null;
+                }
+                return;
+            }
+            
             if (kicked || kickReason) {
+                console.log("[KICK CHECK] Found kick reason, showing modal");
                 var message = '';
                 if (kicked == '1' || kickReason == '1') {
                     message = E("You have been kicked!");
@@ -2084,12 +2105,16 @@
                     message = E("You have been banned!");
                 }
                 if (message) {
+                    console.log("[KICK CHECK] Showing modal with message:", message);
                     qe(ve, message);
                     // Clean up
                     if (kickReason) {
                         try {
                             h.localStorage.removeItem('kickReason');
-                        } catch (e) {}
+                            console.log("[KICK CHECK] Removed kickReason from localStorage");
+                        } catch (e) {
+                            console.log("[KICK CHECK] Could not remove from localStorage:", e);
+                        }
                     }
                     // Clean URL
                     if (kicked) {
@@ -2098,10 +2123,28 @@
                         var newSearch = urlParams.toString();
                         if (newSearch) newUrl += '?' + newSearch;
                         h.history.replaceState({}, '', newUrl);
+                        console.log("[KICK CHECK] Cleaned URL");
                     }
+                } else {
+                    console.log("[KICK CHECK] No message to show");
                 }
+            } else {
+                console.log("[KICK CHECK] No kick reason found");
             }
-        }, 500);
+        }
+        
+        // Check immediately
+        setTimeout(checkAndShowKickMessage, 100);
+        // Check again after a delay (in case page wasn't ready)
+        setTimeout(checkAndShowKickMessage, 500);
+        // Check one more time after page is fully loaded
+        if (h.document.readyState === 'loading') {
+            h.document.addEventListener('DOMContentLoaded', function() {
+                setTimeout(checkAndShowKickMessage, 200);
+            });
+        } else {
+            setTimeout(checkAndShowKickMessage, 1000);
+        }
     }
     function ha(e) {
         S && S.connected && L.id == V && S.emit("data", {
