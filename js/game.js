@@ -2409,39 +2409,28 @@
             y("", t, f(o), !1);
             return;
         }
-        // Get FRESH player object - use this instead of e to ensure we have latest guessed state
-        var currentPlayer = W(e.id);
-        if (!currentPlayer) return; // Player doesn't exist, skip
+        // Get FRESH player object to ensure we have the latest guessed state
+        var freshPlayer = W(e.id);
+        if (!freshPlayer) return; // Player doesn't exist, skip
         
-        !currentPlayer.muted && (o = ((a = W(x)).flags & k) == k,
-        // Check if drawer OR if player has guessed - use FRESH player's guessed state
-        // IMPORTANT: Only check guessed if we're in drawing/word choice state
-        n = e.id == M || ((L.id == j || L.id == V) && currentPlayer.guessed === true),
-        x == M || a.guessed || !n || o) && (a = (currentPlayer.flags & k) == k,
+        !freshPlayer.muted && (o = ((a = W(x)).flags & k) == k,
+        // n = true if drawer OR if player has ACTUALLY guessed (only check guessed during drawing/word choice)
+        n = e.id == M || ((L.id == j || L.id == V) && freshPlayer.guessed === true),
+        x == M || a.guessed || !n || o) && (a = (freshPlayer.flags & k) == k,
         // Start with normal color (black) - DEFAULT
         o = Me,
-        // Apply color logic - match original skribbl.io logic but with fix for guessers
-        (function() {
-            // Only apply special colors during DRAWING or WORD_CHOICE
-            if ((L.id == j || L.id == V)) {
-                var isDrawer = (e.id == M && M != -1) || (e.id == x && (L.id == j || L.id == V));
-                if (isDrawer) {
-                    // Drawer's messages are green (color 1)
-                    o = 1;
-                } else {
-                    // For guessers: ONLY green if they've ACTUALLY guessed (use fresh player check)
-                    var freshCheck = W(e.id);
-                    if (freshCheck && freshCheck.guessed === true) {
-                        o = Ie;  // Green - they guessed correctly
-                    }
-                    // Otherwise o stays Me (black/normal) - DEFAULT
-                }
-            }
-            // If not in drawing/word choice, o stays Me (normal color)
-        })(),
+        // Apply color logic: only during drawing/word choice
+        (L.id == j || L.id == V) && (
+            // If drawer, use color 1 (drawer green)
+            e.id == M ? (o = 1) :
+            // If guesser who has guessed, use Ie (guesschat green)
+            freshPlayer.guessed === true ? (o = Ie) :
+            // Otherwise stays Me (black/normal)
+            (o = Me)
+        ),
         a && (o = Ee),
-        Ua(currentPlayer, $("text", t)),
-        y(currentPlayer.name, t, f(o), !1))
+        Ua(freshPlayer, $("text", t)),
+        y(freshPlayer.name, t, f(o), !1))
     }
     function Ua(e, t) {
         e.bubble && (clearTimeout(e.bubble.timeout),

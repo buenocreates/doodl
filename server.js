@@ -625,7 +625,7 @@ io.on('connection', (socket) => {
         name: p.name,
         avatar: p.avatar,
         score: p.score,
-        guessed: p.guessed,
+        guessed: p.guessed === true ? true : false,
         flags: p.flags
       })),
       round: room.currentRound,
