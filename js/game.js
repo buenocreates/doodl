@@ -2061,8 +2061,47 @@
         h.addEventListener("showKickMessage", function(e) {
             setTimeout(function() {
                 qe(ve, e.detail);
-            }, 100);
-        })
+            }, 300);
+        });
+        // Check for kick message on page load (in case event was already dispatched)
+        setTimeout(function() {
+            if (h._kickMessage) {
+                qe(ve, h._kickMessage);
+                h._kickMessage = null;
+            }
+            // Also check URL parameter directly
+            var urlParams = new URLSearchParams(h.location.search);
+            var kicked = urlParams.get('kicked');
+            var kickReason = null;
+            try {
+                kickReason = h.localStorage.getItem('kickReason');
+            } catch (e) {}
+            if (kicked || kickReason) {
+                var message = '';
+                if (kicked == '1' || kickReason == '1') {
+                    message = E("You have been kicked!");
+                } else if (kicked == '2' || kickReason == '2') {
+                    message = E("You have been banned!");
+                }
+                if (message) {
+                    qe(ve, message);
+                    // Clean up
+                    if (kickReason) {
+                        try {
+                            h.localStorage.removeItem('kickReason');
+                        } catch (e) {}
+                    }
+                    // Clean URL
+                    if (kicked) {
+                        var newUrl = h.location.pathname;
+                        urlParams.delete('kicked');
+                        var newSearch = urlParams.toString();
+                        if (newSearch) newUrl += '?' + newSearch;
+                        h.history.replaceState({}, '', newUrl);
+                    }
+                }
+            }
+        }, 500);
     }
     function ha(e) {
         S && S.connected && L.id == V && S.emit("data", {
