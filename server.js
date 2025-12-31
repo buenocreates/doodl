@@ -446,8 +446,9 @@ function checkSpam(socketId, message, room) {
   // Check for duplicate messages
   if (message === tracker.lastMessageText) {
     tracker.duplicateCount++;
-    // Only count as spam if 3+ duplicates in a row
-    if (tracker.duplicateCount >= SPAM_CONFIG.DUPLICATE_THRESHOLD) {
+    // After first warning, be more aggressive - only need 2 duplicates instead of 3
+    const duplicateThreshold = tracker.warnings > 0 ? 2 : SPAM_CONFIG.DUPLICATE_THRESHOLD;
+    if (tracker.duplicateCount >= duplicateThreshold) {
       isSpam = true;
     }
   } else {
@@ -455,7 +456,9 @@ function checkSpam(socketId, message, room) {
   }
   
   // Check if too many messages in the time window (before adding current one)
-  if (tracker.messages.length >= SPAM_CONFIG.MAX_MESSAGES_PER_WINDOW) {
+  // After first warning, be more aggressive - only need 4 messages instead of 5
+  const maxMessagesThreshold = tracker.warnings > 0 ? 4 : SPAM_CONFIG.MAX_MESSAGES_PER_WINDOW;
+  if (tracker.messages.length >= maxMessagesThreshold) {
     isSpam = true;
   }
   
@@ -469,8 +472,7 @@ function checkSpam(socketId, message, room) {
     tracker.warnings++;
     tracker.lastWarningTime = now;
     
-    // Reset duplicate count when warning is shown so user can continue typing
-    tracker.duplicateCount = 0;
+    // DON'T reset duplicate count after warning - let it continue so spam is detected faster
     
     // Check if we should kick (after enough warnings)
     if (tracker.warnings >= SPAM_CONFIG.MAX_WARNINGS) {
