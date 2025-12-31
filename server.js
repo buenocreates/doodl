@@ -406,13 +406,13 @@ const spamTracker = new Map(); // socket.id -> { messages: [], lastMessage: time
 
 // Anti-spam configuration (exactly like skribbl.io)
 const SPAM_CONFIG = {
-  MAX_MESSAGES_PER_WINDOW: 6,      // Max 6 messages
+  MAX_MESSAGES_PER_WINDOW: 8,      // Max 8 messages (increased from 6)
   TIME_WINDOW_MS: 5000,            // In 5 seconds
-  MIN_MESSAGE_INTERVAL_MS: 100,    // Minimum 100ms between messages
+  MIN_MESSAGE_INTERVAL_MS: 200,    // Minimum 200ms between messages (increased from 100)
   MAX_MESSAGE_LENGTH: 200,         // Max 200 characters per message
-  DUPLICATE_THRESHOLD: 4,           // Max 4 duplicate messages in a row
-  MAX_WARNINGS: 3,                  // Kick after 3 warnings
-  WARNING_COOLDOWN_MS: 0            // No cooldown - warn every time spam is detected
+  DUPLICATE_THRESHOLD: 5,           // Max 5 duplicate messages in a row (increased from 4)
+  MAX_WARNINGS: 5,                  // Kick after 5 warnings (increased from 3)
+  WARNING_COOLDOWN_MS: 2000        // 2 second cooldown between warnings (was 0)
 };
 
 function checkSpam(socketId, message, room) {
@@ -463,25 +463,34 @@ function checkSpam(socketId, message, room) {
   }
   
   if (isSpam) {
-    // Always warn when spam is detected (no cooldown)
-    tracker.warnings++;
-    tracker.lastWarningTime = now;
+    // Check if we should warn (respect cooldown)
+    const shouldWarn = (now - tracker.lastWarningTime) >= SPAM_CONFIG.WARNING_COOLDOWN_MS;
+    
+    if (shouldWarn) {
+      tracker.warnings++;
+      tracker.lastWarningTime = now;
+    }
     
     if (tracker.warnings >= SPAM_CONFIG.MAX_WARNINGS) {
-      // Kick the player after 3 warnings
+      // Kick the player after MAX_WARNINGS warnings
       if (room) {
-        // Kick immediately
+        // Kick with a small delay to prevent overwhelming the server
         const player = room.players.find(p => p.id === socketId);
         if (player) {
-          setTimeout(() => {
-            kickPlayer(room, socketId, 1); // Kick reason 1
-          }, 50);
+          // Use setImmediate instead of setTimeout for better performance
+          setImmediate(() => {
+            try {
+              kickPlayer(room, socketId, 1); // Kick reason 1
+            } catch (error) {
+              console.error('Error kicking player:', error);
+            }
+          });
         }
-        return { isSpam: true, shouldKick: true, shouldWarn: true, warnings: tracker.warnings };
+        return { isSpam: true, shouldKick: true, shouldWarn: shouldWarn, warnings: tracker.warnings };
       }
     }
-    // Send warning every time spam is detected
-    return { isSpam: true, shouldWarn: true, warnings: tracker.warnings };
+    // Send warning if cooldown has passed
+    return { isSpam: true, shouldWarn: shouldWarn, warnings: tracker.warnings };
   }
   
   // Add current message to tracker (only if not spam)
@@ -1688,32 +1697,67 @@ io.on('connection', (socket) => {
   }
   
   function kickPlayer(room, playerId, reason) {
-    const playerSocket = io.sockets.sockets.get(playerId);
-    if (playerSocket) {
+    try {
+      const playerSocket = io.sockets.sockets.get(playerId);
+      if (!playerSocket) {
+        // Socket already disconnected, just remove from room and clean up
+        const index = room.players.findIndex(p => p.id === playerId);
+        if (index !== -1) {
+          room.players.splice(index, 1);
+        }
+        spamTracker.delete(playerId);
+        return;
+      }
+      
       const index = room.players.findIndex(p => p.id === playerId);
       if (index !== -1) {
         const kickedPlayer = room.players[index];
         room.players.splice(index, 1);
-        playerSocket.emit('reason', reason);
-        playerSocket.disconnect();
         
-        io.to(room.id).emit('data', {
-          id: PACKET.LEAVE,
-          data: {
-            id: playerId,
-            reason: reason
-          }
-        });
+        // Clean up spam tracker
+        spamTracker.delete(playerId);
         
-        // Send message to chat (system message - no player ID)
-        io.to(room.id).emit('data', {
-          id: PACKET.CHAT,
-          data: {
-            id: null,  // System message - no player name prefix
-            msg: reason === 1 ? `${kickedPlayer.name} has been kicked!` : `${kickedPlayer.name} has been banned!`
-          }
-        });
+        // Disconnect socket first (with error handling)
+        try {
+          playerSocket.emit('reason', reason);
+          playerSocket.disconnect(true);
+        } catch (error) {
+          console.error('Error disconnecting socket:', error);
+        }
+        
+        // Send leave event (with error handling)
+        try {
+          io.to(room.id).emit('data', {
+            id: PACKET.LEAVE,
+            data: {
+              id: playerId,
+              reason: reason
+            }
+          });
+        } catch (error) {
+          console.error('Error sending leave event:', error);
+        }
+        
+        // Send message to chat (system message - no player ID) (with error handling)
+        try {
+          io.to(room.id).emit('data', {
+            id: PACKET.CHAT,
+            data: {
+              id: null,  // System message - no player name prefix
+              msg: reason === 1 ? `${kickedPlayer.name} has been kicked!` : `${kickedPlayer.name} has been banned!`
+            }
+          });
+        } catch (error) {
+          console.error('Error sending kick message:', error);
+        }
+      } else {
+        // Player not found in room, just clean up
+        spamTracker.delete(playerId);
       }
+    } catch (error) {
+      console.error('Error in kickPlayer:', error);
+      // Clean up spam tracker even on error
+      spamTracker.delete(playerId);
     }
   }
   
