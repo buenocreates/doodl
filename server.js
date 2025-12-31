@@ -465,10 +465,6 @@ function checkSpam(socketId, message, room) {
   }
   
   if (isSpam) {
-    // Update last message tracking for duplicate detection (but don't add to messages array since we're blocking)
-    tracker.lastMessage = now;
-    tracker.lastMessageText = message;
-    
     // Show warnings immediately (no cooldown)
     const shouldWarn = (now - tracker.lastWarningTime) >= SPAM_CONFIG.WARNING_COOLDOWN_MS;
     
@@ -493,14 +489,18 @@ function checkSpam(socketId, message, room) {
             }
           });
         }
-        // Block the message and return kick status
+        // Return kick status - message will still go through but player gets kicked
         return { isSpam: true, shouldKick: true, shouldWarn: false, warnings: tracker.warnings };
       }
     }
     
-    // Block spam messages - don't let them through
-    // Only show warning if we haven't reached kick threshold yet
-    return { isSpam: true, shouldWarn: shouldWarn, warnings: tracker.warnings, blockMessage: true };
+    // Spam detected but not kicked yet - let message through but show warning
+    // Still track the message so spam detection continues to work
+    tracker.messages.push(now);
+    tracker.lastMessage = now;
+    tracker.lastMessageText = message;
+    
+    return { isSpam: true, shouldWarn: shouldWarn, warnings: tracker.warnings };
   }
   
   // Not spam - add message to tracker and reset duplicate count
