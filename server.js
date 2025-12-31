@@ -419,27 +419,28 @@ function checkSpam(socketId, message, room) {
   if (!tracker) {
     tracker = {
       recentMessages: [],             // Track recent messages with timestamps
+      lastMessageTime: 0,             // Track last message time separately
       warnings: 0,
       lastWarningTime: 0
     };
     spamTracker.set(socketId, tracker);
   }
   
-  // Add current message to recent messages
-  tracker.recentMessages.push(now);
-  
-  // Clean up messages older than 1 second
-  tracker.recentMessages = tracker.recentMessages.filter(msgTime => now - msgTime < 1000);
-  
   // Check if this is an "instant spam" message (sent within INSTANT_SPAM_THRESHOLD_MS of previous message)
   let isInstantSpam = false;
-  if (tracker.recentMessages.length >= 2) {
-    const lastMessageTime = tracker.recentMessages[tracker.recentMessages.length - 2];
-    const timeSinceLastMessage = now - lastMessageTime;
+  if (tracker.lastMessageTime > 0) {
+    const timeSinceLastMessage = now - tracker.lastMessageTime;
     if (timeSinceLastMessage <= SPAM_CONFIG.INSTANT_SPAM_THRESHOLD_MS) {
       isInstantSpam = true;
     }
   }
+  
+  // Add current message to recent messages
+  tracker.recentMessages.push(now);
+  tracker.lastMessageTime = now;
+  
+  // Clean up messages older than 1 second
+  tracker.recentMessages = tracker.recentMessages.filter(msgTime => now - msgTime < 1000);
   
   // Check if we have enough consecutive instant spam messages for a warning
   let shouldWarn = false;
@@ -465,7 +466,7 @@ function checkSpam(socketId, message, room) {
       shouldWarn = true;
       tracker.warnings = 1;
       tracker.lastWarningTime = now;
-      // Clear recent messages after first warning
+      // Keep tracking but reset the count
       tracker.recentMessages = [now];
     }
   } else if (tracker.warnings < SPAM_CONFIG.MAX_WARNINGS) {
@@ -474,7 +475,7 @@ function checkSpam(socketId, message, room) {
       shouldWarn = true;
       tracker.warnings++;
       tracker.lastWarningTime = now;
-      // Clear recent messages after each warning
+      // Keep tracking for next check
       tracker.recentMessages = [now];
       
       // Check if we should kick after this warning
