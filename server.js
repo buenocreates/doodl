@@ -408,8 +408,8 @@ const spamTracker = new Map(); // socket.id -> { messages: [], lastMessage: time
 const SPAM_CONFIG = {
   INSTANT_SPAM_THRESHOLD_MS: 200,   // Messages sent within 200ms are considered "instant spam"
   INSTANT_SPAM_COUNT: 3,             // Need 3 instant spam messages for instant warning
-  RATE_SPAM_WINDOW_MS: 3000,         // Time window to check for rate-based spam (3 seconds)
-  RATE_SPAM_COUNT: 6,                // Max messages allowed in RATE_SPAM_WINDOW_MS before warning
+  RATE_SPAM_WINDOW_MS: 4000,         // Time window to check for rate-based spam (4 seconds)
+  RATE_SPAM_COUNT: 4,                // Max messages allowed in RATE_SPAM_WINDOW_MS before warning (lower = more sensitive)
   MAX_WARNINGS: 3,                   // Kick after 3 warnings
   WARNING_COOLDOWN_MS: 0,            // No cooldown - show warnings immediately
   WARNING_RESET_TIME_MS: 5000        // Reset warnings if no spam for 5 seconds
@@ -563,8 +563,20 @@ function checkSpam(socketId, message, room) {
   const messagesInWindow = tracker.recentMessages.length;
   const isRateSpam = messagesInWindow >= SPAM_CONFIG.RATE_SPAM_COUNT;
   
-  // Determine if this message is spam (either instant spam OR rate spam)
-  const isSpam = isInstantSpam || isRateSpam;
+  // Also check for consistent slow spam: if sending messages too frequently (even if not instant)
+  // This catches people spamming at a steady rate (e.g., every 500-1000ms)
+  let isSlowSpam = false;
+  if (tracker.recentMessages.length >= 3 && previousLastMessageTime > 0) {
+    const timeSinceLast = now - previousLastMessageTime;
+    // If sending messages consistently within 1 second of each other, and we have 3+ messages
+    // This catches slower but consistent spamming
+    if (timeSinceLast <= 1000 && messagesInWindow >= 3) {
+      isSlowSpam = true;
+    }
+  }
+  
+  // Determine if this message is spam (instant spam OR rate spam OR slow consistent spam)
+  const isSpam = isInstantSpam || isRateSpam || isSlowSpam;
   
   // Update last spam time if spam is detected
   if (isSpam) {
@@ -573,16 +585,16 @@ function checkSpam(socketId, message, room) {
   
   // Debug logging
   if (tracker.warnings > 0 || isSpam) {
-    console.log(`[SPAM DEBUG] socketId: ${socketId}, warnings: ${tracker.warnings}, isInstantSpam: ${isInstantSpam}, isRateSpam: ${isRateSpam}, messagesInWindow: ${messagesInWindow}, timeSinceLast: ${previousLastMessageTime > 0 ? now - previousLastMessageTime : 'N/A'}ms`);
+    console.log(`[SPAM DEBUG] socketId: ${socketId}, warnings: ${tracker.warnings}, isInstantSpam: ${isInstantSpam}, isRateSpam: ${isRateSpam}, isSlowSpam: ${isSlowSpam}, messagesInWindow: ${messagesInWindow}, timeSinceLast: ${previousLastMessageTime > 0 ? now - previousLastMessageTime : 'N/A'}ms`);
   }
   
   if (tracker.warnings === 0) {
-    // First warning: show on instant spam OR rate spam
-    if (consecutiveInstantSpam >= SPAM_CONFIG.INSTANT_SPAM_COUNT - 1 || isRateSpam) {
+    // First warning: show on instant spam OR rate spam OR slow spam
+    if (consecutiveInstantSpam >= SPAM_CONFIG.INSTANT_SPAM_COUNT - 1 || isRateSpam || isSlowSpam) {
       shouldWarn = true;
       tracker.warnings = 1;
       tracker.lastWarningTime = now;
-      console.log(`[SPAM] First warning - instantSpam: ${consecutiveInstantSpam >= SPAM_CONFIG.INSTANT_SPAM_COUNT - 1}, rateSpam: ${isRateSpam}, messagesInWindow: ${messagesInWindow}`);
+      console.log(`[SPAM] First warning - instantSpam: ${consecutiveInstantSpam >= SPAM_CONFIG.INSTANT_SPAM_COUNT - 1}, rateSpam: ${isRateSpam}, slowSpam: ${isSlowSpam}, messagesInWindow: ${messagesInWindow}`);
       // DON'T clear - keep tracking for next check
     }
   } else if (tracker.warnings === 1) {
