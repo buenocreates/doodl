@@ -401,6 +401,69 @@ app.post('/api/play', (req, res) => {
   }
 });
 
+// Anti-spam tracking per socket
+const spamTracker = new Map(); // socket.id -> { messages: [], lastMessage: timestamp }
+
+// Anti-spam configuration (similar to skribbl.io)
+const SPAM_CONFIG = {
+  MAX_MESSAGES_PER_WINDOW: 5,      // Max 5 messages
+  TIME_WINDOW_MS: 3000,            // In 3 seconds
+  MIN_MESSAGE_INTERVAL_MS: 200,    // Minimum 200ms between messages
+  MAX_MESSAGE_LENGTH: 200,         // Max 200 characters per message
+  DUPLICATE_THRESHOLD: 3           // Max 3 duplicate messages in a row
+};
+
+function checkSpam(socketId, message) {
+  const now = Date.now();
+  let tracker = spamTracker.get(socketId);
+  
+  if (!tracker) {
+    tracker = {
+      messages: [],
+      lastMessage: 0,
+      duplicateCount: 0,
+      lastMessageText: ''
+    };
+    spamTracker.set(socketId, tracker);
+  }
+  
+  // Check message length
+  if (message.length > SPAM_CONFIG.MAX_MESSAGE_LENGTH) {
+    return true;
+  }
+  
+  // Check minimum interval between messages
+  const timeSinceLastMessage = now - tracker.lastMessage;
+  if (timeSinceLastMessage < SPAM_CONFIG.MIN_MESSAGE_INTERVAL_MS) {
+    return true;
+  }
+  
+  // Check for duplicate messages
+  if (message === tracker.lastMessageText) {
+    tracker.duplicateCount++;
+    if (tracker.duplicateCount >= SPAM_CONFIG.DUPLICATE_THRESHOLD) {
+      return true;
+    }
+  } else {
+    tracker.duplicateCount = 0;
+  }
+  
+  // Remove messages older than the time window
+  tracker.messages = tracker.messages.filter(msgTime => now - msgTime < SPAM_CONFIG.TIME_WINDOW_MS);
+  
+  // Check if too many messages in the time window
+  if (tracker.messages.length >= SPAM_CONFIG.MAX_MESSAGES_PER_WINDOW) {
+    return true;
+  }
+  
+  // Add current message to tracker
+  tracker.messages.push(now);
+  tracker.lastMessage = now;
+  tracker.lastMessageText = message;
+  
+  return false;
+}
+
 io.on('connection', (socket) => {
   let player = null;
   let currentRoomId = null;
@@ -718,6 +781,15 @@ io.on('connection', (socket) => {
         
       case PACKET.GUESS:
         if (room.state === GAME_STATE.DRAWING && socket.id !== room.currentDrawer) {
+          // Anti-spam check for guesses (treat guesses as messages for spam detection)
+          if (checkSpam(socket.id, data.data)) {
+            socket.emit('data', {
+              id: PACKET.SPAM,
+              data: null
+            });
+            return; // Don't process the guess
+          }
+          
           if (!player.guessed) {
             // Normalize both guess and word by removing hyphens and converting to lowercase
             const guess = data.data.toLowerCase().trim().replace(/-/g, '');
@@ -843,14 +915,39 @@ io.on('connection', (socket) => {
         
       case PACKET.CHAT:
         // Handle chat messages (packet id 30)
+        // Anti-spam check
+        if (checkSpam(socket.id, data.data)) {
+          socket.emit('data', {
+            id: PACKET.SPAM,
+            data: null
+          });
+          return; // Don't process the message
+        }
+        
         if (room.state === GAME_STATE.DRAWING || room.state === GAME_STATE.WORD_CHOICE) {
           if (socket.id === room.currentDrawer) {
-            // Drawer's chat during drawing or word choice - only send to drawer (they see it in green, others don't see it)
+            // Drawer's chat during drawing or word choice - send to drawer and all players who have guessed
+            // First send to drawer
             socket.emit('data', {
               id: PACKET.CHAT,
               data: {
                 id: socket.id,
                 msg: data.data
+              }
+            });
+            // Also send to all players who have guessed
+            room.players.forEach(p => {
+              if (p.id !== socket.id && p.guessed) {
+                const playerSocket = io.sockets.sockets.get(p.id);
+                if (playerSocket) {
+                  playerSocket.emit('data', {
+                    id: PACKET.CHAT,
+                    data: {
+                      id: socket.id,
+                      msg: data.data
+                    }
+                  });
+                }
               }
             });
           } else {
@@ -908,6 +1005,9 @@ io.on('connection', (socket) => {
   });
   
   socket.on('disconnect', () => {
+    // Clean up spam tracker
+    spamTracker.delete(socket.id);
+    
     if (player && currentRoomId) {
       const room = rooms.get(currentRoomId);
       if (room) {
@@ -915,11 +1015,52 @@ io.on('connection', (socket) => {
         const index = room.players.findIndex(p => p.id === socket.id);
         if (index !== -1) {
           const leavingPlayer = room.players[index];
+          const wasDrawer = room.currentDrawer === socket.id;
+          const wasInWordChoice = room.state === GAME_STATE.WORD_CHOICE;
           room.players.splice(index, 1);
           
+          // If drawer left during WORD_CHOICE, move to next drawer and restart timer
+          if (wasDrawer && wasInWordChoice) {
+            // Clear word choice timer
+            if (room.wordChoiceTimer) {
+              clearInterval(room.wordChoiceTimer);
+              room.wordChoiceTimer = null;
+            }
+            
+            // Check if there are enough players left
+            if (room.players.length < 2) {
+              // Not enough players, return to lobby
+              room.state = GAME_STATE.LOBBY;
+              room.currentRound = 0;
+              room.currentDrawer = -1;
+              room.currentWord = '';
+              room.timer = 0;
+              io.to(currentRoomId).emit('data', {
+                id: PACKET.STATE,
+                data: {
+                  id: GAME_STATE.LOBBY,
+                  time: 0,
+                  data: {}
+                }
+              });
+            } else {
+              // Move to next drawer using round robin (same logic as startRound)
+              // Since the drawer left, we need to recalculate based on current round
+              const drawerIndex = (room.currentRound - 1) % room.players.length;
+              room.currentDrawer = room.players[drawerIndex].id;
+              
+              // Restart word choice with new drawer
+              const words = room.currentWords || getRandomWords(
+                room.settings[SETTINGS.LANG],
+                room.settings[SETTINGS.WORDCOUNT],
+                room.customWords
+              );
+              sendWordChoice(room, words);
+            }
+          }
+          
           // If drawer left, end round (only if actually in DRAWING state)
-          // Check BEFORE removing player to ensure they were actually the drawer
-          if (room.currentDrawer === socket.id && room.state === GAME_STATE.DRAWING) {
+          if (wasDrawer && room.state === GAME_STATE.DRAWING) {
             endRound(room, 1); // Drawer left
           }
           
