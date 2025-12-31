@@ -3315,8 +3315,9 @@ form.chat-form input {
 
 #modal .modal-container-settings input,
 #modal .modal-container-settings select {
-    margin-top: 0;
-    margin-bottom: 0
+    margin: 0;
+    padding: 0;
+    line-height: 1
 }
 
 #modal button {
@@ -3428,21 +3429,27 @@ form.chat-form input {
     margin: 0;
     padding: 0;
     line-height: 1;
-    font-size: 15px
+    font-size: 15px;
+    margin-top: 0;
+    margin-bottom: 0
 }
 
 #modal .modal-container-settings .group .item input[type="range"] {
     display: block;
     margin: 0;
     padding: 0;
-    width: 100%
+    width: 100%;
+    margin-top: 0;
+    margin-bottom: 0
 }
 
 #modal .modal-container-settings .group .item select {
     display: block;
     margin: 0;
     padding: 0;
-    width: 100%
+    width: 100%;
+    margin-top: 0;
+    margin-bottom: 0
 }
 
 #modal .modal-container-settings .group #hotkey-list {
