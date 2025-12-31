@@ -1733,6 +1733,9 @@
         e = a.protocol + "//" + a.hostname),
         (S = O(e, r)).on("connect", function() {
             Jn(!1),
+            // Remove existing listeners to prevent duplicates
+            S.off("joinerr"),
+            S.off("data", Pa),
             S.on("joinerr", function(e) {
                 ua(),
                 qe(ye, (e => {
@@ -2411,7 +2414,16 @@
         o = Me,
         // Drawer's messages use GUESSED color (green, index 1) during DRAWING or WORD_CHOICE
         // Check if this message is from the drawer: either e.id == M (M is set) or e.id == x (we're the drawer) during WORD_CHOICE/DRAWING
-        ((e.id == M && M != -1) || (e.id == x && (L.id == j || L.id == V))) && (L.id == j || L.id == V) ? (o = 1) : (n ? (o = Ie) : (o = Me)),
+        (function() {
+            var isDrawer = (e.id == M && M != -1) || (e.id == x && (L.id == j || L.id == V));
+            if (isDrawer && (L.id == j || L.id == V)) {
+                o = 1;  // Drawer's messages are green (color 1)
+            } else if (e.guessed && !isDrawer) {
+                o = Ie;  // Guesser who has guessed gets GUESSCHAT color (green)
+            } else {
+                o = Me;  // Normal chat color
+            }
+        })(),
         a && (o = Ee),
         Ua(e, $("text", t)),
         y(e.name, t, f(o), !1))
