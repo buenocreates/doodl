@@ -2421,24 +2421,25 @@
         // Drawer's messages use GUESSED color (green, index 1) during DRAWING or WORD_CHOICE
         // Check if this message is from the drawer: either e.id == M (M is set) or e.id == x (we're the drawer) during WORD_CHOICE/DRAWING
         (function() {
-            var isDrawer = (e.id == M && M != -1) || (e.id == x && (L.id == j || L.id == V));
+            // ALWAYS start with normal color
+            o = Me;
             
             // Only apply special colors during DRAWING or WORD_CHOICE
             if ((L.id == j || L.id == V)) {
+                var isDrawer = (e.id == M && M != -1) || (e.id == x && (L.id == j || L.id == V));
+                
                 if (isDrawer) {
                     o = 1;  // Drawer's messages are green (color 1)
                 } else {
-                    // For guessers: ONLY green if they've ACTUALLY guessed (strict check on current player)
-                    if (currentPlayer.guessed === true) {
+                    // For guessers: ONLY green if they've ACTUALLY guessed - get FRESH player object
+                    var freshPlayerCheck = W(e.id);
+                    if (freshPlayerCheck && freshPlayerCheck.guessed === true) {
                         o = Ie;  // Guesser who has ACTUALLY guessed gets GUESSCHAT color (green)
-                    } else {
-                        o = Me;  // Normal chat color for guessers who haven't guessed
                     }
+                    // Otherwise stays Me (normal color) - this is the default
                 }
-            } else {
-                // Not in drawing/word choice - normal color
-                o = Me;
             }
+            // If not in drawing/word choice, o stays Me (normal color)
         })(),
         a && (o = Ee),
         Ua(currentPlayer, $("text", t)),
