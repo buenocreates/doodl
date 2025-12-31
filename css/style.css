@@ -3385,8 +3385,8 @@ form.chat-form input {
 
 #modal .modal-container-settings .group .title .icon {
     display: inline;
-    width: 1.5em;
-    height: 1.5em;
+    width: 1.2em;
+    height: 1.2em;
     margin-right: .5ch;
     background-size: contain;
     filter: drop-shadow(3px 3px 0 rgba(0, 0, 0, .3))
