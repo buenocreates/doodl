@@ -3378,8 +3378,9 @@ form.chat-form input {
     font-weight: 700;
     margin: 0;
     padding: 0;
-    line-height: 1;
-    margin-bottom: 0
+    line-height: 0.9;
+    margin-bottom: 0;
+    height: auto
 }
 
 #modal .modal-container-settings .group .title .icon {
@@ -3423,7 +3424,7 @@ form.chat-form input {
     margin: 0;
     padding: 0;
     line-height: 1;
-    margin-top: 0;
+    margin-top: -0.5em;
     margin-bottom: 0
 }
 
@@ -3473,7 +3474,8 @@ form.chat-form input {
 #modal .modal-container-settings .group #hotkey-list {
     display: flex;
     margin: 0;
-    padding: 0
+    padding: 0;
+    margin-top: -0.5em
 }
 
 #modal .modal-container-settings .group #hotkey-list input {
