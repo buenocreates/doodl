@@ -1846,8 +1846,8 @@
         c.querySelector("#game").style.display = "flex",
         x = e.me,
         In = e.isPublic !== void 0 ? e.isPublic : (e.type !== void 0 ? e.type : !0),  // Store isPublic flag (backwards compat with type)
-        Tn = e.id,
-        c.querySelector("#input-invite").value = h.location.origin + "/?" + e.id,
+        Tn = e.code || e.id,  // Use room code if available (for private rooms), otherwise use room ID
+        c.querySelector("#input-invite").value = h.location.origin + "/?" + (e.code || e.id),
         An = e.settings,
         oa(),
         ce(zn),

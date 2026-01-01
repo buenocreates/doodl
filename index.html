@@ -812,29 +812,21 @@
                     // Patch invite functionality to use our domain and room code
                     // Wait for game.js to initialize first, then patch continuously
                     function patchInviteButtons() {
-                      // Patch the invite input field (game.js sets it to skribbl.io URL)
+                      // No longer needed - game.js now uses location.origin directly
+                      // Just ensure skribbl.io URLs are replaced if they somehow appear
                       const inviteInput = document.querySelector('#input-invite');
-                      if (inviteInput && window._roomCode) {
-                        // Override the value to use our domain and room code
-                        Object.defineProperty(inviteInput, 'value', {
-                          get: function() { 
-                            const code = window._roomCode || window._roomId;
-                            return code ? (location.origin + '/?' + code) : (location.origin + '/');
-                          },
-                          set: function(val) { 
-                            // Ignore skribbl.io URLs, use our domain
-                            if (val && val.includes('skribbl.io')) {
-                              const code = window._roomCode || window._roomId;
-                              if (code) {
-                                this.setAttribute('value', location.origin + '/?' + code);
-                              }
-                            } else {
-                              this.setAttribute('value', val);
-                            }
-                          },
-                          configurable: true
-                        });
-                        inviteInput.value = location.origin + '/?' + window._roomCode;
+                      if (inviteInput) {
+                        // Only patch if we see a skribbl.io URL
+                        const currentValue = inviteInput.value || inviteInput.getAttribute('value') || '';
+                        if (currentValue && currentValue.includes('skribbl.io')) {
+                          // Extract room code from the URL
+                          const match = currentValue.match(/[?&]([A-Za-z0-9]{8})/);
+                          if (match && match[1]) {
+                            inviteInput.value = location.origin + '/?' + match[1];
+                          } else if (window._roomCode) {
+                            inviteInput.value = location.origin + '/?' + window._roomCode;
+                          }
+                        }
                       }
                       
                       // Patch invite buttons to use our domain and show chat message
