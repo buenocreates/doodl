@@ -2260,8 +2260,35 @@
         }
         o = !t && 1 == An[te.WORDMODE];
         o && (n = 3);
-        // Display "GUESS THIS" without numbers (numbers go next to underscores)
-        N[0].textContent = E(o ? "WORD HIDDEN" : "GUESS THIS"),
+        // Display "GUESS THIS" with number below "THIS" (like the image)
+        // Clear any existing word-length from description
+        var existingWordLength = N[0].querySelector(".word-length");
+        if (existingWordLength) {
+            existingWordLength.remove();
+        }
+        // Create description with "GUESS THIS" and number below
+        N[0].innerHTML = "";
+        var guessText = c.createElement("span");
+        guessText.textContent = E(o ? "WORD HIDDEN" : "GUESS THIS");
+        N[0].appendChild(guessText);
+        // Add word-length number below "THIS" (only if not hidden mode)
+        if (!o) {
+            var wordLengthEl = $("word-length", "");
+            if (wordLengths.length > 1) {
+                wordLengthEl.textContent = wordLengths.join(" ");
+            } else if (wordLengths.length === 1) {
+                wordLengthEl.textContent = wordLengths[0].toString();
+            } else if (Array.isArray(e)) {
+                wordLengthEl.textContent = e.join(" ");
+            } else if (typeof e === "number") {
+                wordLengthEl.textContent = n.toString();
+            } else if (typeof e === "string" && e.length > 0) {
+                // Calculate total length for string
+                var totalLen = wordLengths.length > 0 ? wordLengths.reduce(function(sum, len) { return sum + len; }, 0) : e.replace(/\s+/g, '').length;
+                wordLengthEl.textContent = totalLen.toString();
+            }
+            N[0].appendChild(wordLengthEl);
+        }
         N[1].style.display = "none",
         N[2].style.display = "",
         ce(N[2]),
@@ -2295,23 +2322,7 @@
                 N[2].hints[a] = $("hint", o ? "?" : "_"),
                 N[2].appendChild(N[2].hints[a]);
         }
-        // Add word-length element next to underscores (like official skribbl.io)
-        // Show individual word lengths for multi-word phrases, or total for single words
-        if (!o) {
-            if (wordLengths.length > 1) {
-                // Multiple words - show individual lengths like "5 7" next to underscores
-                N[2].appendChild($("word-length", wordLengths.join(" ")));
-            } else if (wordLengths.length === 1) {
-                // Single word - show just the length
-                N[2].appendChild($("word-length", wordLengths[0].toString()));
-            } else if (Array.isArray(e)) {
-                // Array mode (combination) - show array values
-                N[2].appendChild($("word-length", e.join(" ")));
-            } else if (typeof e === "number") {
-                // Number mode - show the number
-                N[2].appendChild($("word-length", n.toString()));
-            }
-        }
+        // Word-length is now shown in the description above, not next to underscores
     }
     function ma(e) {
         if (!e || !Array.isArray(e)) return; // Safety check

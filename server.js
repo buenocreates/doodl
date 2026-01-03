@@ -203,7 +203,7 @@ function initializePublicRooms() {
       const room = {
         id: roomId,
         players: [],
-        settings: [0, 8, 80, 3, 6, 2, 0, 0], // Default settings (English only) - 6 words per round, 2 hints
+        settings: [0, 8, 80, 3, 3, 2, 0, 0], // Default settings (English only) - 3 words per round, 2 hints
         state: GAME_STATE.LOBBY,
         currentRound: 0,
         currentDrawer: -1,
@@ -334,7 +334,7 @@ app.post('/api/play', (req, res) => {
         availableRoom = {
           id: roomId,
           players: [],
-          settings: [0, 8, 80, 3, 6, 2, 0, 0], // Fixed settings: English, 8 max, 80s, 3 rounds, 6 words, 2 hints
+          settings: [0, 8, 80, 3, 6, 2, 0, 0], // Fixed settings: English, 8 max, 80s, 3 rounds, 6 words per round, 2 hints
           state: GAME_STATE.LOBBY,
           currentRound: 0,
           currentDrawer: -1,
@@ -1175,10 +1175,21 @@ io.on('connection', (socket) => {
       case PACKET.CHAT:
         // Handle chat messages (packet id 30)
         // Block links in chat messages - any 2+ letter word followed by a dot and anything
-        const message = data.data || '';
-        // Pattern: 2+ letters/numbers, then a dot, then anything (like "example.com", "test.io", etc.)
-        const linkPattern = /\b[a-zA-Z0-9]{2,}\.[a-zA-Z0-9.-]+/i;
+        // data.data is the message string directly
+        const message = String(data.data || '').trim();
+        
+        // Comprehensive link pattern: catches any 2+ alphanumeric chars, dot, then any chars
+        // This catches: example.com, test.io, abc.xyz, www.test.com, http://test.com, https://test.com, etc.
+        // Also catches patterns like "go to example.com" or "check test.io"
+        // Pattern breakdown:
+        // - [a-zA-Z0-9]{2,}\.[a-zA-Z0-9.-]+ : matches "example.com", "test.io", etc.
+        // - https?:\/\/[^\s]+ : matches "http://..." or "https://..."
+        // - www\.[a-zA-Z0-9.-]+ : matches "www.example.com"
+        const linkPattern = /([a-zA-Z0-9]{2,}\.[a-zA-Z0-9.-]+|https?:\/\/[^\s]+|www\.[a-zA-Z0-9.-]+)/i;
+        
+        // Check for links BEFORE processing the message
         if (linkPattern.test(message)) {
+          console.log(`[LINK BLOCK] ⛔ Blocked link in message from ${socket.id}: "${message}"`);
           // Block the message and notify the user
           socket.emit('data', {
             id: PACKET.ERROR,
@@ -1187,8 +1198,10 @@ io.on('connection', (socket) => {
               message: 'Links are not allowed in chat!'
             }
           });
-          return; // Don't send the message
+          return; // Don't send the message - exit early
         }
+        
+        console.log(`[CHAT] ✓ Message from ${socket.id} passed link check: "${message.substring(0, 50)}"`);
         // Anti-spam check
         const spamResult = checkSpam(socket.id, message, room);
         if (spamResult.isSpam) {
@@ -1949,20 +1962,42 @@ io.on('connection', (socket) => {
       if (room.timer <= 0) {
         clearInterval(countdownInterval);
         
-        // For public rooms, automatically start a new game (don't return to lobby)
+        // For public rooms, automatically start a new game (infinite loop - restart from round 1)
         if (room.isPublic) {
-          // Reset scores and start new game immediately
+          console.log(`🔄 [PUBLIC ROOM] Game ended, restarting automatically for room ${room.id}`);
+          // Reset everything for a fresh game
           room.currentRound = 0;
           room.currentDrawer = -1;
           room.currentWord = '';
+          room.currentWordIndex = -1;
           room.timer = 0;
+          room.drawCommands = [];
+          room.guessCount = 0;
+          room.revealedIndices = null;
+          room.hintIndex = 0;
           room.players.forEach(p => {
             p.score = 0;
             p.guessed = false;
+            p.roundStartScore = 0;
           });
           
-          // Auto-start new game for public rooms
+          // Clear any existing timers
+          if (room.timerInterval) {
+            clearInterval(room.timerInterval);
+            room.timerInterval = null;
+          }
+          if (room.hintInterval) {
+            clearInterval(room.hintInterval);
+            room.hintInterval = null;
+          }
+          if (room.wordChoiceTimer) {
+            clearInterval(room.wordChoiceTimer);
+            room.wordChoiceTimer = null;
+          }
+          
+          // Auto-start new game for public rooms (will start round 1)
           setTimeout(() => {
+            console.log(`🎮 [PUBLIC ROOM] Starting new game for room ${room.id}`);
             startGame(room);
           }, 1000);
         } else {
