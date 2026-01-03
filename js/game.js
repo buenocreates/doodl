@@ -1930,22 +1930,33 @@
         }) : (cn.classList.add("show"),
         // For public rooms in LOBBY state, show waiting overlay instead of settings panel
         (n.id == J && ((In !== void 0 && In !== null && In !== false) || (In === void 0 && n.type === 0))) ? (
-            // Public room - show waiting overlay with animated dots, don't show settings panel
+            // Public room - show waiting overlay, check player count to determine message
             vn(A),
             (function() {
-                var dots = 0;
-                var baseText = E("Waiting for players");
-                function updateDots() {
-                    var dotStr = ".";
-                    for (var i = 0; i < dots; i++) dotStr += ".";
-                    A.textContent = baseText + dotStr;
-                    dots = (dots + 1) % 4; // Cycle 0, 1, 2, 3 (0, 1, 2, 3 dots)
+                // Check player count to determine message
+                if (w.length >= 3) {
+                    // 3+ players - show "Starting game..."
+                    if (h._waitingDotsInterval) {
+                        clearInterval(h._waitingDotsInterval);
+                        h._waitingDotsInterval = null;
+                    }
+                    A.textContent = E("Starting game...");
+                } else {
+                    // < 3 players - show "Waiting for players..." with animated dots
+                    var dots = 0;
+                    var baseText = E("Waiting for players");
+                    function updateDots() {
+                        var dotStr = ".";
+                        for (var i = 0; i < dots; i++) dotStr += ".";
+                        A.textContent = baseText + dotStr;
+                        dots = (dots + 1) % 4; // Cycle 0, 1, 2, 3 (0, 1, 2, 3 dots)
+                    }
+                    updateDots();
+                    // Clear any existing interval
+                    if (h._waitingDotsInterval) clearInterval(h._waitingDotsInterval);
+                    // Update dots every 500ms
+                    h._waitingDotsInterval = setInterval(updateDots, 500);
                 }
-                updateDots();
-                // Clear any existing interval
-                if (h._waitingDotsInterval) clearInterval(h._waitingDotsInterval);
-                // Update dots every 500ms
-                h._waitingDotsInterval = setInterval(updateDots, 500);
             })(),
             yn({
                 top: 0,
@@ -2362,6 +2373,51 @@
                 a.joinTimeout = void 0
             }
             , 0 == In ? 1e3 : 0);
+            // Update waiting message for public rooms based on player count
+            if (L.id == J && ((In !== void 0 && In !== null && In !== false) || (In === void 0 && L.type === 0))) {
+                // Public room in lobby - update message based on player count
+                if (w.length >= 3) {
+                    // 3+ players - show "Starting game..."
+                    if (h._waitingDotsInterval) {
+                        clearInterval(h._waitingDotsInterval);
+                        h._waitingDotsInterval = null;
+                    }
+                    vn(A);
+                    A.textContent = E("Starting game...");
+                    if (!cn.classList.contains("show")) {
+                        cn.classList.add("show");
+                        yn({
+                            top: 0,
+                            opacity: 1
+                        }, 600);
+                    }
+                } else {
+                    // < 3 players - show "Waiting for players..." with animated dots
+                    if (!cn.classList.contains("show")) {
+                        cn.classList.add("show");
+                        yn({
+                            top: 0,
+                            opacity: 1
+                        }, 600);
+                    }
+                    vn(A);
+                    (function() {
+                        var dots = 0;
+                        var baseText = E("Waiting for players");
+                        function updateDots() {
+                            var dotStr = ".";
+                            for (var i = 0; i < dots; i++) dotStr += ".";
+                            A.textContent = baseText + dotStr;
+                            dots = (dots + 1) % 4; // Cycle 0, 1, 2, 3 (0, 1, 2, 3 dots)
+                        }
+                        updateDots();
+                        // Clear any existing interval
+                        if (h._waitingDotsInterval) clearInterval(h._waitingDotsInterval);
+                        // Update dots every 500ms
+                        h._waitingDotsInterval = setInterval(updateDots, 500);
+                    })();
+                }
+            }
             break;
         case ka:
             (a = W(n.id)) && (a.avatar = n.avatar,
@@ -2397,6 +2453,51 @@
             R.playSound(qn)) : (clearTimeout(a.joinTimeout),
             a.joinTimeout = void 0),
             n.id != M || n.reason != Q && n.reason != ee || Kt(!0));
+            // Update waiting message for public rooms when player leaves
+            if (L.id == J && ((In !== void 0 && In !== null && In !== false) || (In === void 0 && L.type === 0))) {
+                // Public room in lobby - update message based on player count
+                if (w.length >= 3) {
+                    // 3+ players - show "Starting game..."
+                    if (h._waitingDotsInterval) {
+                        clearInterval(h._waitingDotsInterval);
+                        h._waitingDotsInterval = null;
+                    }
+                    vn(A);
+                    A.textContent = E("Starting game...");
+                    if (!cn.classList.contains("show")) {
+                        cn.classList.add("show");
+                        yn({
+                            top: 0,
+                            opacity: 1
+                        }, 600);
+                    }
+                } else {
+                    // < 3 players - show "Waiting for players..." with animated dots
+                    vn(A);
+                    (function() {
+                        var dots = 0;
+                        var baseText = E("Waiting for players");
+                        function updateDots() {
+                            var dotStr = ".";
+                            for (var i = 0; i < dots; i++) dotStr += ".";
+                            A.textContent = baseText + dotStr;
+                            dots = (dots + 1) % 4; // Cycle 0, 1, 2, 3 (0, 1, 2, 3 dots)
+                        }
+                        updateDots();
+                        // Clear any existing interval
+                        if (h._waitingDotsInterval) clearInterval(h._waitingDotsInterval);
+                        // Update dots every 500ms
+                        h._waitingDotsInterval = setInterval(updateDots, 500);
+                    })();
+                    if (!cn.classList.contains("show")) {
+                        cn.classList.add("show");
+                        yn({
+                            top: 0,
+                            opacity: 1
+                        }, 600);
+                    }
+                }
+            }
             break;
         case ba:
             var o = W(n[0])
