@@ -1188,20 +1188,11 @@ io.on('connection', (socket) => {
         const linkPattern = /([a-zA-Z0-9]{2,}\.[a-zA-Z0-9.-]+|https?:\/\/[^\s]+|www\.[a-zA-Z0-9.-]+)/i;
         
         // Check for links BEFORE processing the message
+        // Silently block links - don't send error message, just don't send the message
         if (linkPattern.test(message)) {
-          console.log(`[LINK BLOCK] ⛔ Blocked link in message from ${socket.id}: "${message}"`);
-          // Block the message and notify the user
-          socket.emit('data', {
-            id: PACKET.ERROR,
-            data: {
-              id: 0,
-              message: 'Links are not allowed in chat!'
-            }
-          });
-          return; // Don't send the message - exit early
+          console.log(`[LINK BLOCK] ⛔ Silently blocked link in message from ${socket.id}: "${message}"`);
+          return; // Don't send the message - exit early (no error message, no kick)
         }
-        
-        console.log(`[CHAT] ✓ Message from ${socket.id} passed link check: "${message.substring(0, 50)}"`);
         // Anti-spam check
         const spamResult = checkSpam(socket.id, message, room);
         if (spamResult.isSpam) {
@@ -1333,13 +1324,28 @@ io.on('connection', (socket) => {
             }
             
             // Check if there are enough players left
+            // Game continues until only 1 player left (then return to lobby)
             if (room.players.length < 2) {
-              // Not enough players, return to lobby
+              // Only 1 player left - return to lobby (waiting for players)
+              console.log(`⏸️ Only 1 player left in room ${currentRoomId}, returning to lobby`);
               room.state = GAME_STATE.LOBBY;
               room.currentRound = 0;
               room.currentDrawer = -1;
               room.currentWord = '';
               room.timer = 0;
+              // Clear all timers
+              if (room.timerInterval) {
+                clearInterval(room.timerInterval);
+                room.timerInterval = null;
+              }
+              if (room.hintInterval) {
+                clearInterval(room.hintInterval);
+                room.hintInterval = null;
+              }
+              if (room.wordChoiceTimer) {
+                clearInterval(room.wordChoiceTimer);
+                room.wordChoiceTimer = null;
+              }
               io.to(currentRoomId).emit('data', {
                 id: PACKET.STATE,
                 data: {
@@ -1349,6 +1355,7 @@ io.on('connection', (socket) => {
                 }
               });
             } else {
+              // 2+ players left - game continues
               // Move to next drawer using round robin (same logic as startRound)
               // Since the drawer left, we need to recalculate based on current round
               const drawerIndex = (room.currentRound - 1) % room.players.length;
@@ -1366,8 +1373,41 @@ io.on('connection', (socket) => {
           }
           
           // If drawer left, end round (only if actually in DRAWING state)
+          // But only if we have 2+ players - if only 1 player left, return to lobby instead
           if (wasDrawer && room.state === GAME_STATE.DRAWING) {
+            if (room.players.length < 2) {
+              // Only 1 player left - return to lobby instead of ending round
+              console.log(`⏸️ Drawer left, only 1 player remaining in room ${currentRoomId}, returning to lobby`);
+              room.state = GAME_STATE.LOBBY;
+              room.currentRound = 0;
+              room.currentDrawer = -1;
+              room.currentWord = '';
+              room.timer = 0;
+              // Clear all timers
+              if (room.timerInterval) {
+                clearInterval(room.timerInterval);
+                room.timerInterval = null;
+              }
+              if (room.hintInterval) {
+                clearInterval(room.hintInterval);
+                room.hintInterval = null;
+              }
+              if (room.wordChoiceTimer) {
+                clearInterval(room.wordChoiceTimer);
+                room.wordChoiceTimer = null;
+              }
+              io.to(currentRoomId).emit('data', {
+                id: PACKET.STATE,
+                data: {
+                  id: GAME_STATE.LOBBY,
+                  time: 0,
+                  data: {}
+                }
+              });
+            } else {
+              // 2+ players left - continue game, end round and move to next drawer
             endRound(room, 1); // Drawer left
+            }
           }
           
           // Handle ownership transfer
@@ -1458,13 +1498,16 @@ io.on('connection', (socket) => {
             // Room is empty - delete it
             rooms.delete(currentRoomId);
             console.log('🗑️ Room deleted (empty):', currentRoomId);
-          } else if (room.players.length === 1 && !room.isPublic) {
-            // Private room with only 1 player left - return to lobby (settings screen)
+          } else if (room.players.length === 1) {
+            // Only 1 player left (public or private) - return to lobby (waiting for players)
             const remainingPlayer = room.players[0];
             
-            // Make the remaining player the new owner
-            room.owner = remainingPlayer.id;
+            // Make the remaining player the new owner (for private rooms)
+            if (!room.isPublic) {
+              room.owner = remainingPlayer.id;
+            }
             
+            console.log(`⏸️ Only 1 player left in room ${currentRoomId}, returning to lobby`);
             // Reset room state to lobby
             room.state = GAME_STATE.LOBBY;
             room.currentRound = 0;
@@ -1490,16 +1533,17 @@ io.on('connection', (socket) => {
               p.guessed = false;
             });
             
-            // Send LOBBY state to return to settings screen (so they can start the game manually)
-            // Send owner change first, then lobby state
-            io.to(remainingPlayer.id).emit('data', {
-              id: PACKET.OWNER,
-              data: room.owner
-            });
+            // Send owner change first (for private rooms), then lobby state
+            if (!room.isPublic) {
+              io.to(remainingPlayer.id).emit('data', {
+                id: PACKET.OWNER,
+                data: room.owner
+              });
+            }
             
             // Small delay before sending LOBBY state to ensure owner message shows first
             setTimeout(() => {
-              io.to(remainingPlayer.id).emit('data', {
+              io.to(currentRoomId).emit('data', {
                 id: PACKET.STATE,
                 data: {
                   id: GAME_STATE.LOBBY,
