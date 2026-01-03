@@ -287,76 +287,52 @@ app.post('/api/play', (req, res) => {
       console.log('🔗 Created private room with code:', roomCode, '→', roomId);
     } else if (!roomId) {
       // No roomId provided - this could be:
-      // 1. Public room join (Play button) - use public room for language
-      // 2. Private room create (Create button) - will be handled in Socket.IO login
-      // For now, return a public room ID. Socket.IO login will create private room if create=1
-      roomId = `PUBLIC-${lang}`;
+      // 1. Public room join (Play button) - find available lobby or create new one
+      // Public rooms: fixed settings, auto-start at 3+ players, max 8 players
+      // Settings: [LANG, SLOTS, DRAWTIME, ROUNDS, WORDCOUNT, HINTCOUNT, WORDMODE, CUSTOMWORDSONLY]
+      // Fixed: [0, 8, 80, 3, 6, 0, 0, 0] = English, 8 max, 80s draw, 3 rounds, 6 words
       
-      // Ensure public rooms are initialized
-      if (publicRooms.size === 0) {
-        initializePublicRooms();
-      }
-      
-      // Get or create the public room
-      let publicRoom = publicRooms.get(roomId);
-      
-      if (!publicRoom) {
-        // Room doesn't exist, create it
-        publicRoom = {
-          id: roomId,
-          players: [],
-          settings: [0, 8, 80, 3, 3, 0, 0, 0], // Force English (lang = 0)
-          state: GAME_STATE.LOBBY,
-          currentRound: 0,
-          currentDrawer: -1,
-          currentWord: '',
-          currentWordIndex: -1,
-          timer: 0,
-          drawCommands: [],
-          customWords: null,
-          owner: null,
-          startTime: null,
-          timerInterval: null,
-          hintInterval: null,
-          hintIndex: 0,
-          isPublic: true
-        };
-        publicRooms.set(roomId, publicRoom);
-        rooms.set(roomId, publicRoom);
-        console.log('✅ Created public room:', roomId);
-      } else if (publicRoom.players.length >= publicRoom.settings[SETTINGS.SLOTS] || 
-                 publicRoom.state !== GAME_STATE.LOBBY) {
-        // Room is full or in game, create a new one
-        roomId = `PUBLIC-${lang}-${Date.now()}`;
-        const newRoom = {
-          id: roomId,
-          players: [],
-          settings: [0, 8, 80, 3, 3, 0, 0, 0], // Force English (lang = 0)
-          state: GAME_STATE.LOBBY,
-          currentRound: 0,
-          currentDrawer: -1,
-          currentWord: '',
-          currentWordIndex: -1,
-          timer: 0,
-          drawCommands: [],
-          customWords: null,
-          owner: null,
-          startTime: null,
-          timerInterval: null,
-          hintInterval: null,
-          hintIndex: 0,
-          isPublic: true
-        };
-        rooms.set(roomId, newRoom);
-        console.log('✅ Created new public room instance:', roomId);
-      } else {
-        // Use existing room
-        roomId = publicRoom.id;
-        // Ensure it's in the main rooms map
-        if (!rooms.has(roomId)) {
-          rooms.set(roomId, publicRoom);
+      // Find an available public lobby (in LOBBY state with < 8 players)
+      let availableRoom = null;
+      for (const [id, room] of rooms.entries()) {
+        if (room.isPublic && 
+            room.state === GAME_STATE.LOBBY && 
+            room.players.length < 8) {
+          availableRoom = room;
+          roomId = id;
+          break;
         }
       }
+      
+      // If no available room, create a new one
+      if (!availableRoom) {
+        // Generate unique room ID
+        roomId = `PUBLIC-${lang}-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+        availableRoom = {
+          id: roomId,
+          players: [],
+          settings: [0, 8, 80, 3, 6, 0, 0, 0], // Fixed settings: English, 8 max, 80s, 3 rounds, 6 words
+          state: GAME_STATE.LOBBY,
+          currentRound: 0,
+          currentDrawer: -1,
+          currentWord: '',
+          currentWordIndex: -1,
+          timer: 0,
+          drawCommands: [],
+          customWords: null,
+          owner: null, // No owner for public rooms
+          startTime: null,
+          timerInterval: null,
+          hintInterval: null,
+          hintIndex: 0,
+          isPublic: true,
+          autoStartTimer: null // Timer for auto-starting when 3+ players
+        };
+        rooms.set(roomId, availableRoom);
+        console.log('✅ Created new public lobby:', roomId);
+      }
+      
+      roomId = availableRoom.id;
     }
     
     const room = rooms.get(roomId);
@@ -791,8 +767,8 @@ io.on('connection', (socket) => {
     // Add player to room
     room.players.push(player);
     
-    // Set owner if first player
-    if (!room.owner) {
+    // Public rooms have no owner (no host controls)
+    if (!room.isPublic && !room.owner) {
       room.owner = socket.id;
     }
     
@@ -849,6 +825,27 @@ io.on('connection', (socket) => {
         flags: 0
       }
     });
+    
+    // Auto-start public rooms when 3+ players join
+    if (room.isPublic && room.state === GAME_STATE.LOBBY) {
+      // Clear any existing auto-start timer
+      if (room.autoStartTimer) {
+        clearTimeout(room.autoStartTimer);
+        room.autoStartTimer = null;
+      }
+      
+      // If we have 3+ players, auto-start after a short delay (2 seconds)
+      if (room.players.length >= 3) {
+        console.log(`🎮 Auto-starting public room ${roomId} with ${room.players.length} players`);
+        room.autoStartTimer = setTimeout(() => {
+          // Double-check we still have 3+ players and are in lobby
+          if (room.players.length >= 3 && room.state === GAME_STATE.LOBBY) {
+            startGame(room);
+          }
+          room.autoStartTimer = null;
+        }, 2000); // 2 second delay to allow more players to join
+      }
+    }
   });
   
   socket.on('data', (data) => {
@@ -858,6 +855,11 @@ io.on('connection', (socket) => {
     
     switch (data.id) {
       case PACKET.SETTINGS:
+        // Block settings changes for public rooms (no host controls)
+        if (room.isPublic) {
+          console.log('🚫 Settings change blocked for public room:', currentRoomId);
+          return; // Ignore settings changes for public rooms
+        }
         if (room.owner === socket.id) {
           room.settings[data.data.id] = data.data.val;
           io.to(currentRoomId).emit('data', {
@@ -868,6 +870,11 @@ io.on('connection', (socket) => {
         break;
         
       case PACKET.CUSTOM_WORDS:
+        // Block custom words for public rooms (they auto-start)
+        if (room.isPublic) {
+          console.log('🚫 Custom words blocked for public room:', currentRoomId);
+          return; // Ignore custom words for public rooms
+        }
         if (room.owner === socket.id) {
           // Check minimum 2 players requirement
           if (room.players.length < 2) {
@@ -1236,13 +1243,22 @@ io.on('connection', (socket) => {
     if (player && currentRoomId) {
       const room = rooms.get(currentRoomId);
       if (room) {
-        // Remove player
-        const index = room.players.findIndex(p => p.id === socket.id);
-        if (index !== -1) {
-          const leavingPlayer = room.players[index];
-          const wasDrawer = room.currentDrawer === socket.id;
-          const wasInWordChoice = room.state === GAME_STATE.WORD_CHOICE;
-          room.players.splice(index, 1);
+          // Remove player
+          const index = room.players.findIndex(p => p.id === socket.id);
+          if (index !== -1) {
+            const leavingPlayer = room.players[index];
+            const wasDrawer = room.currentDrawer === socket.id;
+            const wasInWordChoice = room.state === GAME_STATE.WORD_CHOICE;
+            room.players.splice(index, 1);
+            
+            // Clear auto-start timer for public rooms if player count drops below 3
+            if (room.isPublic && room.autoStartTimer) {
+              if (room.players.length < 3) {
+                clearTimeout(room.autoStartTimer);
+                room.autoStartTimer = null;
+                console.log(`⏸️ Auto-start cancelled for public room ${currentRoomId} - only ${room.players.length} players`);
+              }
+            }
           
           // If drawer left during WORD_CHOICE, move to next drawer and restart timer
           if (wasDrawer && wasInWordChoice) {
@@ -1437,14 +1453,23 @@ io.on('connection', (socket) => {
   });
   
   function startGame(room) {
-    // Check minimum 2 players requirement
-    if (room.players.length < 2) {
-      // Notify owner that minimum 2 players are required
-      io.to(room.owner).emit('data', {
-        id: PACKET.CLOSE,
-        data: 'Minimum 2 players required to start the game!'
-      });
-      return;
+    // Check minimum players requirement
+    // Public rooms need 3+ players, private rooms need 2+
+    const minPlayers = room.isPublic ? 3 : 2;
+    if (room.players.length < minPlayers) {
+      if (room.isPublic) {
+        // For public rooms, just return - game will auto-start when 3+ players join
+        return;
+      } else {
+        // Notify owner that minimum players are required
+        if (room.owner) {
+          io.to(room.owner).emit('data', {
+            id: PACKET.CLOSE,
+            data: `Minimum ${minPlayers} players required to start the game!`
+          });
+        }
+        return;
+      }
     }
     
     room.currentRound = 0;
