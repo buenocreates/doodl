@@ -2390,11 +2390,8 @@ form.chat-form input {
     font-size: 1.1em;
     color: var(--COLOR_GAMEBAR_WORD_DESCRIPTION);
     animation: word_description_introduce 0.4s ease-out;
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    justify-content: center;
-    flex-wrap: wrap;
+    display: inline-block;
+    text-align: center;
 }
 
 #game-word .description.waiting {
@@ -2466,7 +2463,7 @@ form.chat-form input {
     margin-left: 0.3em;
     vertical-align: super;
     position: relative;
-    top: -0.2em;
+    top: -0.15em;
 }
 
 #game-word .hints .container .word-length {

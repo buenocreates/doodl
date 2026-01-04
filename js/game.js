@@ -2295,29 +2295,36 @@
         if (existingWordLength) {
             existingWordLength.remove();
         }
-        // Create description with "GUESS THIS" and number inline
+        // Create description with "GUESS THIS" and number inline on same line
         N[0].innerHTML = "";
-        var guessText = c.createElement("span");
-        guessText.textContent = E(o ? "WORD HIDDEN" : "GUESS THIS");
-        N[0].appendChild(guessText);
+        var guessText = E(o ? "WORD HIDDEN" : "GUESS THIS");
         // Add word-length number inline with "GUESS THIS" (only if not hidden mode)
         if (!o) {
-            var wordLengthEl = c.createElement("span");
-            wordLengthEl.className = "word-length";
+            var wordLengthValue = "";
             if (wordLengths.length > 1) {
-                wordLengthEl.textContent = " " + wordLengths.join(" ");
+                wordLengthValue = " " + wordLengths.join(" ");
             } else if (wordLengths.length === 1) {
-                wordLengthEl.textContent = " " + wordLengths[0].toString();
+                wordLengthValue = " " + wordLengths[0].toString();
             } else if (Array.isArray(e)) {
-                wordLengthEl.textContent = " " + e.join(" ");
+                wordLengthValue = " " + e.join(" ");
             } else if (typeof e === "number") {
-                wordLengthEl.textContent = " " + n.toString();
+                wordLengthValue = " " + n.toString();
             } else if (typeof e === "string" && e.length > 0) {
                 // Calculate total length for string
                 var totalLen = wordLengths.length > 0 ? wordLengths.reduce(function(sum, len) { return sum + len; }, 0) : e.replace(/\s+/g, '').length;
-                wordLengthEl.textContent = " " + totalLen.toString();
+                wordLengthValue = " " + totalLen.toString();
             }
+            // Create span with "GUESS THIS" and number inline
+            var textSpan = c.createElement("span");
+            textSpan.textContent = guessText;
+            N[0].appendChild(textSpan);
+            var wordLengthEl = c.createElement("span");
+            wordLengthEl.className = "word-length";
+            wordLengthEl.textContent = wordLengthValue;
             N[0].appendChild(wordLengthEl);
+        } else {
+            // Hidden mode - just show text
+            N[0].textContent = guessText;
         }
         N[1].style.display = "none";
         N[2].style.display = "";
@@ -2358,17 +2365,23 @@
         } else {
             // For number or array mode, use underscores for all positions
             console.log("[PA] Processing number/array mode, n:", n);
-            if (n > 0) {
+            if (n > 0 && !isNaN(n)) {
                 for (a = 0; a < n; a++) {
                     var hintText = o ? "?" : "_";
                     N[2].hints[a] = $("hint", hintText);
                     N[2].appendChild(N[2].hints[a]);
-                    console.log("[PA] Created hint at index", a, "with text:", hintText);
+                    console.log("[PA] Created hint at index", a, "with text:", hintText, "element:", N[2].hints[a]);
                 }
-                console.log("[PA] Created", n, "hint elements");
+                console.log("[PA] Created", n, "hint elements, container children:", N[2].children.length);
             } else {
-                console.log("[PA] WARNING: n is 0 or invalid, no hints created!");
+                console.log("[PA] WARNING: n is 0 or invalid (n=", n, "), no hints created!");
             }
+        }
+        // Ensure container is visible
+        if (N[2]) {
+            N[2].style.display = "flex";
+            N[2].style.visibility = "visible";
+            console.log("[PA] Container display:", N[2].style.display, "visibility:", N[2].style.visibility, "children:", N[2].children.length);
         }
         // Word-length is now shown in the description above, not next to underscores
     }
