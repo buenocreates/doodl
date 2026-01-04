@@ -2318,8 +2318,9 @@
                     N[2].appendChild(N[2].hints[a]);
                 } else {
                     // For underscores or any other character, create a hint with "_" or "?"
-                    N[2].hints[a] = $("hint", o ? "?" : "_");
-                    N[2].appendChild(N[2].hints[a]);
+                    var hintEl = $("hint", o ? "?" : "_");
+                    N[2].hints[a] = hintEl;
+                    N[2].appendChild(hintEl);
                 }
             }
         } else {
@@ -2346,13 +2347,7 @@
               , o = e[n][1]; // Character to reveal
             // Skip if hint element is null (spaces) or doesn't exist
             if (t && t[a] && t[a] !== null) {
-                // Remove uncover class first to retrigger animation if it was already there
-                if (t[a].classList.contains("uncover")) {
-                    t[a].classList.remove("uncover");
-                    // Force reflow to ensure class removal is processed
-                    void t[a].offsetWidth;
-                }
-                // Set text and add class (official way - exactly like skribbl.io)
+                // Official way - exactly like skribbl.io: set text and add class in one line
                 t[a].textContent = o;
                 t[a].classList.add("uncover");
             }
