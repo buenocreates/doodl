@@ -2345,16 +2345,9 @@
             if (!e[n] || !Array.isArray(e[n]) || e[n].length < 2) continue;
             var a = e[n][0]  // Index in the word (including spaces)
               , o = e[n][1]; // Character to reveal
-            // Only set if hint element exists (skip null spaces)
+            // Official way - exactly like skribbl.io (simple one-liner)
             if (t && t[a] && t[a] !== null) {
-                // Remove class first to retrigger animation
-                t[a].classList.remove("uncover");
-                // Set text
-                t[a].textContent = o;
-                // Force reflow to ensure class removal is processed
-                void t[a].offsetWidth;
-                // Add class to trigger animation
-                t[a].classList.add("uncover");
+                t[a].textContent = o, t[a].classList.add("uncover");
             }
         }
     }
