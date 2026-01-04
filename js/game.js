@@ -2101,21 +2101,16 @@
             // wordStructure should be a string like "_____ _____" with underscores and spaces
             (function() {
                 var wordData = e.data.wordStructure;
-                console.log("[WORD DISPLAY] wordStructure:", wordData, "wordLength:", e.data.wordLength, "word:", e.data.word);
                 if (!wordData && e.data.wordLength !== undefined) {
                     // Fallback: create underscores based on wordLength
                     wordData = e.data.wordLength;
-                    console.log("[WORD DISPLAY] Using wordLength fallback:", wordData);
                 } else if (!wordData && e.data.word) {
                     // Fallback: use word length
                     wordData = e.data.word.length;
-                    console.log("[WORD DISPLAY] Using word.length fallback:", wordData);
                 } else if (!wordData) {
                     // Last resort: use 0 (shouldn't happen)
                     wordData = 0;
-                    console.log("[WORD DISPLAY] Using 0 fallback (ERROR!)");
                 }
-                console.log("[WORD DISPLAY] Calling pa() with:", wordData, "type:", typeof wordData);
                 pa(wordData, !1);
             })(),
             ma(e.data.hints))
@@ -2340,29 +2335,26 @@
     function ma(e) {
         if (!e || !Array.isArray(e)) return; // Safety check
         if (!N[2] || !N[2].hints) return; // Safety check - ensure hints array exists
-        console.log("[MA] Called with data:", e, "hints array length:", N[2].hints.length);
         for (var t = N[2].hints, n = 0; n < e.length; n++) {
             // Check if e[n] exists and is an array
             if (!e[n] || !Array.isArray(e[n]) || e[n].length < 2) continue;
             var a = e[n][0]  // Index in the word (including spaces)
               , o = e[n][1]; // Character to reveal
-            console.log("[MA] Processing hint - index:", a, "character:", o, "hint exists:", t && t[a] !== null && t[a] !== undefined);
             // Official way - exactly like skribbl.io
             if (t && t[a] && t[a] !== null) {
                 var hintEl = t[a];
-                // Set text
+                // Set text first
                 hintEl.textContent = o;
-                // Remove class to reset animation
+                // Remove class to reset animation state
                 hintEl.classList.remove("uncover");
-                // Clear any inline animation style
-                hintEl.style.animation = '';
                 // Force reflow
                 void hintEl.offsetWidth;
-                // Add class to trigger CSS animation
-                hintEl.classList.add("uncover");
-                console.log("[MA] Added uncover class, element:", hintEl, "has class:", hintEl.classList.contains("uncover"), "computed animation:", h.getComputedStyle(hintEl).animation);
-            } else {
-                console.warn("[MA] Hint element at index", a, "is null or doesn't exist");
+                // Add class with small delay to ensure animation triggers (especially when revealing all at once)
+                setTimeout(function(el) {
+                    return function() {
+                        el.classList.add("uncover");
+                    };
+                }(hintEl), n * 20); // Stagger animations by 20ms each for visual effect
             }
         }
     }
