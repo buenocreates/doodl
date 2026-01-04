@@ -2297,23 +2297,55 @@
         }
     }
     function ma(e) {
-        for (var t = N[2].hints, n = 0; n < e.length; n++) {
+        var t = N[2].hints;
+        if (!t) return;
+        
+        // First pass: set text content and remove uncover class
+        for (var n = 0; n < e.length; n++) {
             var a = e[n][0],
                 o = e[n][1];
-            if (t && t[a] && t[a] !== null) {
+            if (t[a] && t[a] !== null) {
                 var hintEl = t[a];
                 // Set text content first
                 hintEl.textContent = o;
-                // Remove class if it exists to retrigger animation
+                // Remove uncover class if it exists to retrigger animation
                 hintEl.classList.remove("uncover");
-                // Force reflow
-                void hintEl.offsetWidth;
-                // Add uncover class with staggered delay for animation effect
-                (function(index, element) {
+            }
+        }
+        
+        // Force reflow to ensure all class removals are processed
+        void N[2].offsetWidth;
+        
+        // Second pass: add uncover class with staggered delay from outside in (inwards animation)
+        // Find the actual range of hint indices (excluding nulls/spaces)
+        var validIndices = [];
+        for (n = 0; n < e.length; n++) {
+            a = e[n][0];
+            if (t[a] && t[a] !== null) {
+                validIndices.push(a);
+            }
+        }
+        
+        // Calculate delays for inwards animation
+        for (n = 0; n < e.length; n++) {
+            a = e[n][0];
+            o = e[n][1];
+            if (t[a] && t[a] !== null) {
+                hintEl = t[a];
+                // Find position in valid indices array
+                var posInValid = validIndices.indexOf(a);
+                var totalValid = validIndices.length;
+                // Calculate distance from start and end of valid hints
+                var distanceFromStart = posInValid;
+                var distanceFromEnd = totalValid - 1 - posInValid;
+                // Delay: start from both ends, meet in the middle (inwards animation)
+                var delay = Math.min(distanceFromStart, distanceFromEnd) * 50;
+                // Add uncover class with staggered delay
+                (function(el, d) {
                     setTimeout(function() {
-                        element.classList.add("uncover");
-                    }, index * 50);
-                })(n, hintEl);
+                        el.classList.add("uncover");
+                    }, d);
+                })(hintEl, delay);
             }
         }
     }
