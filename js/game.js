@@ -2345,16 +2345,14 @@
                 var hintEl = t[a];
                 // Set text first
                 hintEl.textContent = o;
-                // Remove class to reset animation state
+                // Remove class if it exists to retrigger animation
                 hintEl.classList.remove("uncover");
-                // Force reflow
-                void hintEl.offsetWidth;
-                // Add class with small delay to ensure animation triggers (especially when revealing all at once)
-                setTimeout(function(el) {
-                    return function() {
+                // Use requestAnimationFrame to ensure animation triggers in next frame
+                (function(el, idx) {
+                    h.requestAnimationFrame(function() {
                         el.classList.add("uncover");
-                    };
-                }(hintEl), n * 20); // Stagger animations by 20ms each for visual effect
+                    });
+                })(hintEl, n);
             }
         }
     }
