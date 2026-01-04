@@ -2461,9 +2461,7 @@ form.chat-form input {
     font-size: 0.85em;
     font-weight: 700;
     margin-left: 0.3em;
-    vertical-align: super;
-    position: relative;
-    top: -0.15em;
+    vertical-align: baseline;
 }
 
 #game-word .hints .container .word-length {

@@ -334,7 +334,7 @@ app.post('/api/play', (req, res) => {
         availableRoom = {
           id: roomId,
           players: [],
-          settings: [0, 8, 80, 3, 6, 2, 0, 0], // Fixed settings: English, 8 max, 80s, 3 rounds, 6 words per round, 2 hints
+          settings: [0, 8, 80, 3, 3, 2, 0, 0], // Fixed settings: English, 8 max, 80s, 3 rounds, 3 words per round, 2 hints
           state: GAME_STATE.LOBBY,
           currentRound: 0,
           currentDrawer: -1,
