@@ -2300,7 +2300,7 @@
         var t = N[2].hints;
         if (!t) return;
         
-        // First pass: set text content and remove uncover class
+        // First pass: set text content and remove uncover class from ALL hints
         for (var n = 0; n < e.length; n++) {
             var a = e[n][0],
                 o = e[n][1];
@@ -2317,7 +2317,7 @@
         void N[2].offsetWidth;
         
         // Second pass: add uncover class with staggered delay from outside in (inwards animation)
-        // Find the actual range of hint indices (excluding nulls/spaces)
+        // Collect all valid hint indices first
         var validIndices = [];
         for (n = 0; n < e.length; n++) {
             a = e[n][0];
@@ -2326,7 +2326,7 @@
             }
         }
         
-        // Calculate delays for inwards animation
+        // Calculate delays for inwards animation and apply
         for (n = 0; n < e.length; n++) {
             a = e[n][0];
             o = e[n][1];
@@ -2334,25 +2334,33 @@
                 hintEl = t[a];
                 // Find position in valid indices array
                 var posInValid = validIndices.indexOf(a);
+                if (posInValid === -1) continue;
                 var totalValid = validIndices.length;
                 // Calculate distance from start and end of valid hints
                 var distanceFromStart = posInValid;
                 var distanceFromEnd = totalValid - 1 - posInValid;
                 // Delay: start from both ends, meet in the middle (inwards animation)
                 var delay = Math.min(distanceFromStart, distanceFromEnd) * 50;
-                // Add uncover class with staggered delay
-                (function(el, d) {
+                // Add uncover class with staggered delay using IIFE to capture variables
+                (function(element, delayTime) {
                     setTimeout(function() {
-                        el.classList.add("uncover");
-                    }, d);
+                        element.classList.add("uncover");
+                    }, delayTime);
                 })(hintEl, delay);
             }
         }
     }
     function ga(e) {
         if (!e || typeof e !== "string") return;
+        // Ensure hints container is visible
+        N[2].style.display = "";
+        N[1].style.display = "none";
         // Official way - exactly like skribbl.io
-        (!N[2].hints || N[2].hints.length < e.length) && pa([e.length], !0);
+        // Initialize hints if they don't exist or are too short
+        if (!N[2].hints || N[2].hints.length < e.length) {
+            pa([e.length], !0);
+        }
+        // Build array of [index, character] pairs
         for (var t = [], n = 0; n < e.length; n++) 
             t.push([n, e.charAt(n)]);
         ma(t);
@@ -2568,10 +2576,13 @@
                 // Reveal the word with animation for all players (except drawer)
                 // Drawer already sees the word, so only reveal for non-drawers
                 x != M && (
-                    // Ensure hints container is visible
+                    // Ensure hints container is visible and word element is hidden
                     N[2].style.display = "",
                     N[1].style.display = "none",
-                    ga(n.word)
+                    // Small delay to ensure DOM is ready, then reveal with animation
+                    setTimeout(function() {
+                        ga(n.word);
+                    }, 10)
                 ),
                 n.id == x && (
                     // Current user guessed correctly - show them the word like the drawer sees it
