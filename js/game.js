@@ -2345,9 +2345,17 @@
             if (!e[n] || !Array.isArray(e[n]) || e[n].length < 2) continue;
             var a = e[n][0]  // Index in the word (including spaces)
               , o = e[n][1]; // Character to reveal
-            // Official way - exactly like skribbl.io (simple one-liner)
+            // Official way - exactly like skribbl.io
             if (t && t[a] && t[a] !== null) {
-                t[a].textContent = o, t[a].classList.add("uncover");
+                var hintEl = t[a];
+                // Remove class if exists to retrigger animation
+                hintEl.classList.remove("uncover");
+                // Set text
+                hintEl.textContent = o;
+                // Use requestAnimationFrame to ensure animation retriggers
+                h.requestAnimationFrame(function() {
+                    hintEl.classList.add("uncover");
+                });
             }
         }
     }
