@@ -2340,11 +2340,13 @@
     function ma(e) {
         if (!e || !Array.isArray(e)) return; // Safety check
         if (!N[2] || !N[2].hints) return; // Safety check - ensure hints array exists
+        console.log("[MA] Called with data:", e, "hints array length:", N[2].hints.length);
         for (var t = N[2].hints, n = 0; n < e.length; n++) {
             // Check if e[n] exists and is an array
             if (!e[n] || !Array.isArray(e[n]) || e[n].length < 2) continue;
             var a = e[n][0]  // Index in the word (including spaces)
               , o = e[n][1]; // Character to reveal
+            console.log("[MA] Processing hint - index:", a, "character:", o, "hint exists:", t && t[a] !== null && t[a] !== undefined);
             // Official way - exactly like skribbl.io
             if (t && t[a] && t[a] !== null) {
                 var hintEl = t[a];
@@ -2352,11 +2354,15 @@
                 hintEl.textContent = o;
                 // Remove class to reset animation
                 hintEl.classList.remove("uncover");
+                // Clear any inline animation style
+                hintEl.style.animation = '';
                 // Force reflow
                 void hintEl.offsetWidth;
-                // Explicitly set animation via JavaScript to ensure it triggers
-                hintEl.style.animation = 'hint_uncover .8s ease-in-out 1';
+                // Add class to trigger CSS animation
                 hintEl.classList.add("uncover");
+                console.log("[MA] Added uncover class, element:", hintEl, "has class:", hintEl.classList.contains("uncover"), "computed animation:", h.getComputedStyle(hintEl).animation);
+            } else {
+                console.warn("[MA] Hint element at index", a, "is null or doesn't exist");
             }
         }
     }
