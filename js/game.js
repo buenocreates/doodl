@@ -2345,27 +2345,25 @@
             if (!e[n] || !Array.isArray(e[n]) || e[n].length < 2) continue;
             var a = e[n][0]  // Index in the word (including spaces)
               , o = e[n][1]; // Character to reveal
-            // Skip if hint element is null (spaces) or doesn't exist
+            // Only set if hint element exists (skip null spaces)
             if (t && t[a] && t[a] !== null) {
-                // Official way - exactly like skribbl.io: set text and add class in one line
+                // Remove class first to retrigger animation
+                t[a].classList.remove("uncover");
+                // Set text
                 t[a].textContent = o;
+                // Force reflow to ensure class removal is processed
+                void t[a].offsetWidth;
+                // Add class to trigger animation
                 t[a].classList.add("uncover");
             }
         }
     }
     function ga(e) {
         if (!e || typeof e !== "string") return;
-        // If hints array doesn't exist or is too short, recreate it
-        if (!N[2].hints || N[2].hints.length < e.length) {
-            pa([e.length], !0);
-        }
-        // Create array of [index, character] pairs for all characters
-        for (var t = [], n = 0; n < e.length; n++) {
-            // Only reveal actual letters (skip spaces and dashes if they're null in hints array)
-            if (N[2].hints && N[2].hints[n] !== null && N[2].hints[n] !== undefined) {
-                t.push([n, e.charAt(n)]);
-            }
-        }
+        // Official way - exactly like skribbl.io
+        (!N[2].hints || N[2].hints.length < e.length) && pa([e.length], !0);
+        for (var t = [], n = 0; n < e.length; n++) 
+            t.push([n, e.charAt(n)]);
         ma(t);
     }
     function fa(e) {
