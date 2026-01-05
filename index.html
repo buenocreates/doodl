@@ -55,6 +55,21 @@
         <meta name="twitter:description" content="skribbl io is a free multiplayer drawing and guessing game. Draw and guess words with your friends and people all around the world! Score the most points and be the winner!">
         <meta name="twitter:image" content="https://skribbl.io/img/thumbnail.png">
         <link rel="icon" type="image/png" href="favicon.png">
+        <svg style="position: absolute; width: 0; height: 0;" aria-hidden="true" focusable="false">
+            <defs>
+                <filter id="remove-white-outline" x="-50%" y="-50%" width="200%" height="200%">
+                    <feColorMatrix type="matrix" in="SourceGraphic" values="
+                        1.2 0 0 0 0.1
+                        0 1.2 0 0 0.1
+                        0 0 1.2 0 0.1
+                        0 0 0 1 0
+                    " result="brightened"/>
+                    <feComponentTransfer in="brightened">
+                        <feFuncA type="gamma" amplitude="1.1" exponent="0.9" offset="0"/>
+                    </feComponentTransfer>
+                </filter>
+            </defs>
+        </svg>
         <link rel="stylesheet" type="text/css" href="css/style.css" title="stylesheet">
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -67,7 +82,7 @@
         <div id="home">
             <div class="logo-big">
                 <a href="/">
-                    <img src="/img/logogif2.gif">
+                    <img src="/img/2logo.gif">
                 </a>
                 <div class="avatar-container"></div>
             </div>
@@ -228,7 +243,7 @@
             <div id="game-wrapper">
                 <div id="game-logo">
                     <a href="/">
-                        <img src="/img/logogif2.gif">
+                        <img src="/img/2logo.gif">
                     </a>
                     <div class="ad-1">
                         <!-- Ad removed -->

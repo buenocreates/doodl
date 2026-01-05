@@ -998,9 +998,10 @@ body .snow {
 #game-logo a img {
     width: 320px;
     height: auto;
-    filter: drop-shadow(3px 3px 0 rgba(0, 0, 0, .25));
-    object-fit: contain;
+    filter: drop-shadow(3px 3px 0 rgba(0, 0, 0, .25)) contrast(1.15) brightness(1.05) saturate(1.2);
     display: block;
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: crisp-edges;
 }
 
 #game-wrapper {
@@ -1330,7 +1331,8 @@ body .snow {
     text-align: center;
     display: flex;
     flex-direction: column;
-    justify-content: center
+    justify-content: center;
+    padding-right: var(--UNIT)
 }
 
 #game-players .player .player-name {
@@ -2944,9 +2946,11 @@ form.chat-form input {
     max-width: 500px;
     width: auto;
     height: auto;
-    filter: drop-shadow(3px 3px 0 rgba(0, 0, 0, .25));
+    filter: drop-shadow(3px 3px 0 rgba(0, 0, 0, .25)) contrast(1.15) brightness(1.05) saturate(1.2);
     display: block;
     margin: 0 auto;
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: crisp-edges;
 }
 
 #home .logo-big .avatar-container {

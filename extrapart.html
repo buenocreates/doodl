@@ -95,6 +95,21 @@
     </script>
     <script async src="//api.adinplay.com/libs/aiptag/pub/SKR/skribbl.io/tag.min.js"></script>
     <head>
+        <svg style="position: absolute; width: 0; height: 0;" aria-hidden="true" focusable="false">
+            <defs>
+                <filter id="remove-white-outline" x="-50%" y="-50%" width="200%" height="200%">
+                    <feColorMatrix type="matrix" in="SourceGraphic" values="
+                        1.2 0 0 0 0.1
+                        0 1.2 0 0 0.1
+                        0 0 1.2 0 0.1
+                        0 0 0 1 0
+                    " result="brightened"/>
+                    <feComponentTransfer in="brightened">
+                        <feFuncA type="gamma" amplitude="1.1" exponent="0.9" offset="0"/>
+                    </feComponentTransfer>
+                </filter>
+            </defs>
+        </svg>
         <title>skribbl - Free Multiplayer Drawing &amp;Guessing Game</title>
         <meta charset="utf-8">
         <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -128,7 +143,7 @@
         <div id="home">
             <div class="logo-big">
                 <a href="/">
-                    <img src="/img/logogif2.gif">
+                    <img src="/img/2logo.gif">
                 </a>
                 <div class="avatar-container"></div>
             </div>
@@ -321,7 +336,7 @@
             <div id="game-wrapper">
                 <div id="game-logo">
                     <a href="/">
-                        <img src="/img/logogif2.gif">
+                        <img src="/img/2logo.gif">
                     </a>
                     <div class="ad-1">
                         <ins class="adsbygoogle" style="display:inline-block;width:728px;height:90px" data-ad-client="ca-pub-9486091533756129" data-ad-slot="6426007092"></ins>
