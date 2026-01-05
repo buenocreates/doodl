@@ -701,16 +701,6 @@ io.on('connection', (socket) => {
       // IMPORTANT: If create=1, this is a private room create request
       // The API might have returned a public room ID, but we need to create a private room
       if (create === 1 || create === '1') {
-      let roomId = join || code;
-      
-      // Limit name to 16 characters
-      const playerName = (name || 'Player').trim().substring(0, 16);
-      
-      console.log('🔐 Socket.IO login:', { join, create, name: playerName, lang, code, roomId });
-      
-      // IMPORTANT: If create=1, this is a private room create request
-      // The API might have returned a public room ID, but we need to create a private room
-      if (create === 1 || create === '1') {
         // This is a create private room request - generate new room ID and code
         roomId = generateRoomId();
         const roomCode = generateRoomCode();
