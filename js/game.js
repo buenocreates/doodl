@@ -2422,6 +2422,7 @@
     function Pa(e) {
         var t = e.id
           , n = e.data;
+        console.log("Pa: received packet, id:", t, "data:", n);
         switch (t) {
         case Ca:
             aa(n);
