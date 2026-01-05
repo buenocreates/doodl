@@ -2581,11 +2581,13 @@
             o && r && y(E("$ is voting to kick $ ($/$)", [o.name, r.name, i, l]), "", f(Le), !0);
             break;
         case Da:
+            console.log("GUESS case reached! n.id:", n.id, "n.word:", n.word, "x:", x, "M:", M);
             (a = W(n.id)) && (
             // Update player's score if provided
             n.score !== undefined && (a.score = n.score),
             // Only show "guessed" message if word is provided (silent score updates for drawer when word is null)
             n.word && (
+                console.log("GUESS: word exists, a.name:", a.name),
                 (function() {
                     var msg = E("$ guessed the word!", a.name);
                     var msgEl = y(msg, "", f(1), !0);
@@ -2596,15 +2598,22 @@
                 R.playSound(xn),
                 // Reveal the word with animation for all players (except drawer)
                 // Drawer already sees the word, so only reveal for non-drawers
-                x != M && (
-                    // Ensure hints container is visible and word element is hidden
-                    N[2].style.display = "",
-                    N[1].style.display = "none",
-                    // Small delay to ensure DOM is ready, then reveal with animation
-                    setTimeout(function() {
-                        ga(n.word);
-                    }, 10)
-                ),
+                (function() {
+                    console.log("GUESS: checking reveal condition - x != M:", x != M);
+                    if (x != M) {
+                        console.log("GUESS: revealing word, N[2] exists:", !!N[2]);
+                        // Ensure hints container is visible and word element is hidden
+                        N[2].style.display = "";
+                        N[1].style.display = "none";
+                        // Small delay to ensure DOM is ready, then reveal with animation
+                        setTimeout(function() {
+                            console.log("GUESS: calling ga with word:", n.word);
+                            ga(n.word);
+                        }, 10);
+                    } else {
+                        console.log("GUESS: user is drawer, skipping");
+                    }
+                })(),
                 n.id == x && (
                     // Current user guessed correctly - show them the word like the drawer sees it
                     // Delay the display switch to allow the animation to complete (animation is 0.8s + staggered delays)
