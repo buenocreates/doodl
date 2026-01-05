@@ -998,7 +998,8 @@ body .snow {
 #game-logo a img {
     width: 320px;
     height: auto;
-    filter: drop-shadow(3px 3px 0 rgba(0, 0, 0, .25))
+    filter: drop-shadow(3px 3px 0 rgba(0, 0, 0, .25));
+    background: transparent;
 }
 
 #game-wrapper {
@@ -2929,7 +2930,11 @@ form.chat-form input {
 }
 
 #home .logo-big img {
-    filter: drop-shadow(3px 3px 0 rgba(0, 0, 0, .25))
+    max-width: 400px;
+    width: auto;
+    height: auto;
+    filter: drop-shadow(3px 3px 0 rgba(0, 0, 0, .25));
+    mix-blend-mode: multiply;
 }
 
 #home .logo-big .avatar-container {
@@ -3845,8 +3850,10 @@ form.chat-form input {
     }
 
     #home .logo-big img {
-        width: 100%;
-        height: auto
+        max-width: 90vw;
+        width: auto;
+        height: auto;
+        max-height: 15vh;
     }
 
     #home .logo-big .avatar-container {
