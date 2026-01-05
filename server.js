@@ -676,8 +676,19 @@ io.on('connection', (socket) => {
   let player = null;
   let currentRoomId = null;
   
+  // Handle socket errors
+  socket.on('error', (error) => {
+    console.error(`❌ Socket error for ${socket.id}:`, error);
+  });
+  
+  socket.on('disconnect', (reason) => {
+    console.log(`🔌 Socket ${socket.id} disconnected: ${reason}`);
+    // Cleanup is handled in the disconnect handler below
+  });
+  
   socket.on('login', (data) => {
-    const { join, create, name, code, avatar } = data;
+    try {
+      const { join, create, name, code, avatar } = data;
     // Force English only (lang = 0)
     const lang = 0;
     let roomId = join || code;
@@ -877,15 +888,20 @@ io.on('connection', (socket) => {
           room.autoStartTimer = null;
         }, 2000); // 2 second delay to allow more players to join
       }
+    } catch (error) {
+      console.error(`❌ Error in login handler for ${socket.id}:`, error);
+      console.error('Stack:', error.stack);
+      socket.emit('loginerr', { id: 32, message: 'Login failed due to server error' });
     }
   });
   
   socket.on('data', (data) => {
-    if (!player || !currentRoomId) return;
-    const room = rooms.get(currentRoomId);
-    if (!room) return;
-    
-    switch (data.id) {
+    try {
+      if (!player || !currentRoomId) return;
+      const room = rooms.get(currentRoomId);
+      if (!room) return;
+      
+      switch (data.id) {
       case PACKET.SETTINGS:
         // Block settings changes for public rooms (no host controls)
         if (room.isPublic) {
@@ -1291,6 +1307,15 @@ io.on('connection', (socket) => {
       case PACKET.REPORT:
         // Reports are handled client-side only
         break;
+        
+      default:
+        console.log(`⚠️ Unknown packet ID: ${data.id}`);
+        break;
+    }
+    } catch (error) {
+      console.error(`❌ Error handling packet ${data.id} from ${socket.id}:`, error);
+      console.error('Stack:', error.stack);
+      // Don't crash - just log the error
     }
   });
   
@@ -2224,9 +2249,33 @@ io.on('connection', (socket) => {
 // Initialize public rooms on startup
 initializePublicRooms();
 
+// Global error handlers to prevent server crashes
+process.on('uncaughtException', (error) => {
+  console.error('❌ Uncaught Exception:', error);
+  console.error('Stack:', error.stack);
+  // Don't exit - let the server continue running
+  // Render will restart if needed
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('❌ Unhandled Rejection at:', promise);
+  console.error('Reason:', reason);
+  // Don't exit - let the server continue running
+});
+
+// Handle socket.io connection errors
+io.engine.on('connection_error', (err) => {
+  console.error('❌ Socket.IO connection error:', err);
+});
+
+// Handle server errors
+server.on('error', (error) => {
+  console.error('❌ Server error:', error);
+});
+
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
+  console.log(`✅ Server running on http://localhost:${PORT}`);
   console.log(`Public rooms initialized for English only`);
 });
 
