@@ -1169,15 +1169,30 @@ io.on('connection', (socket) => {
               const guessPosition = room.guessCount;
               
               // Calculate guesser's score based on position (much higher now)
+              // Store pending score - will be awarded at round end
               const guesserScore = calculateScore(timeRemaining, room.settings[SETTINGS.DRAWTIME], word.length, guessPosition);
-              player.score += guesserScore;
+              
+              // Initialize pendingScores if it doesn't exist
+              if (!room.pendingScores) {
+                room.pendingScores = new Map();
+              }
+              
+              // Store pending score for guesser (will be awarded at round end)
+              if (!room.pendingScores.has(socket.id)) {
+                room.pendingScores.set(socket.id, 0);
+              }
+              room.pendingScores.set(socket.id, room.pendingScores.get(socket.id) + guesserScore);
+              
               player.guessed = true;
               
-              // Give drawer a percentage of the guesser's score (drawer gets less than guesser)
+              // Store pending score for drawer (will be awarded at round end)
               const drawer = room.players.find(p => p.id === room.currentDrawer);
               if (drawer) {
                 const drawerScore = calculateDrawerScore(guesserScore, guessPosition);
-                drawer.score += drawerScore;
+                if (!room.pendingScores.has(room.currentDrawer)) {
+                  room.pendingScores.set(room.currentDrawer, 0);
+                }
+                room.pendingScores.set(room.currentDrawer, room.pendingScores.get(room.currentDrawer) + drawerScore);
               }
               
               // If first guess and timer > 32s and more than 2 players, drop timer to 32s
@@ -1206,28 +1221,15 @@ io.on('connection', (socket) => {
                 startHintSystem(room);
               }
               
-              // Send GUESS packet with updated score to all players
+              // Send GUESS packet to show they guessed correctly, but don't update score yet
               io.to(currentRoomId).emit('data', {
                 id: PACKET.GUESS,
                 data: {
                   id: socket.id,
                   word: room.currentWord,
-                  score: player.score  // Send updated total score
+                  score: player.score  // Send current score (not updated yet)
                 }
               });
-              
-              // Update drawer's score on all clients (drawer gets less points than guesser)
-              // Send GUESS packet with drawer's ID but no word, so client updates score without "guessed" message
-              if (drawer) {
-                io.to(currentRoomId).emit('data', {
-                  id: PACKET.GUESS,
-                  data: {
-                    id: room.currentDrawer,
-                    word: null,  // No word = silent score update only
-                    score: drawer.score  // Send drawer's updated total score
-                  }
-                });
-              }
               
               // Check if all players guessed
               const allGuessed = room.players.filter(p => p.id !== room.currentDrawer).every(p => p.guessed);
@@ -1736,6 +1738,8 @@ io.on('connection', (socket) => {
       p.guessed = false;
       p.roundStartScore = 0;  // Initialize round start score
     });
+    // Initialize pending scores map
+    room.pendingScores = new Map();
     startRound(room);
   }
   
@@ -1757,6 +1761,8 @@ io.on('connection', (socket) => {
     });
     // Reset guess counter for position tracking
     room.guessCount = 0;
+    // Initialize pending scores map for this round
+    room.pendingScores = new Map();
     
     // Select words
     const words = getRandomWords(
@@ -2064,6 +2070,18 @@ io.on('connection', (socket) => {
     room.state = GAME_STATE.ROUND_END;
     // Clear current drawer when round ends to prevent false "drawer left" messages
     room.currentDrawer = -1;
+    
+    // Award all pending scores from this round
+    if (room.pendingScores) {
+      room.pendingScores.forEach((pendingScore, playerId) => {
+        const player = room.players.find(p => p.id === playerId);
+        if (player) {
+          player.score += pendingScore;
+        }
+      });
+      // Clear pending scores for next round
+      room.pendingScores.clear();
+    }
     
     // Calculate scores: [playerId, totalScore, roundScore]
     // roundScore is the delta for this round (shown with + prefix)
