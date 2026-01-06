@@ -43,15 +43,15 @@ app.use(express.static(__dirname, {
   }
 }));
 
-// Serve favicon (circular version of fulllogo.png)
+// Serve favicon
 app.get('/favicon.png', (req, res) => {
-  res.sendFile(path.join(__dirname, 'img', 'fulllogo.png'));
+  res.sendFile(path.join(__dirname, 'img', 'favicon1.png'));
 });
 app.get('/favicon.ico', (req, res) => {
-  res.sendFile(path.join(__dirname, 'img', 'fulllogo.png'));
+  res.sendFile(path.join(__dirname, 'img', 'favicon1.png'));
 });
-app.get('/img/fulllogo.png', (req, res) => {
-  res.sendFile(path.join(__dirname, 'img', 'fulllogo.png'));
+app.get('/img/favicon1.png', (req, res) => {
+  res.sendFile(path.join(__dirname, 'img', 'favicon1.png'));
 });
 
 // Handle room code URLs (e.g., /?UsCN6Pnv or /?room=UsCN6Pnv)
