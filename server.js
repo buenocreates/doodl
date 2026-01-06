@@ -885,16 +885,20 @@ io.on('connection', (socket) => {
     if (!room.isPublic && !room.owner) {
       room.owner = socket.id;
     }
-    // Ensure public rooms never have an owner
-    if (room.isPublic) {
+    // Ensure public rooms never have an owner and isPublic is explicitly set
+    const isPublicRoom = room.isPublic === true;
+    if (isPublicRoom) {
       room.owner = null;
+      room.isPublic = true; // Ensure it's explicitly true
+    } else {
+      room.isPublic = false; // Ensure it's explicitly false for private rooms
     }
     
     // Send game data (include room code for private rooms)
-    // CRITICAL: For public rooms, type must be 0 and owner must be null to show waiting screen
+    // CRITICAL: For public rooms, type must be 0, owner must be null, and isPublic must be true to show waiting screen
     const gameData = {
       me: socket.id,
-      type: room.isPublic ? 0 : (create === 1 || create === '1' ? 1 : 0), // Public = 0, Private = 1
+      type: isPublicRoom ? 0 : (create === 1 || create === '1' ? 1 : 0), // Public = 0, Private = 1
       id: roomId,
       users: room.players.map(p => ({
         id: p.id,
@@ -905,7 +909,7 @@ io.on('connection', (socket) => {
         flags: p.flags
       })),
       round: room.currentRound,
-      owner: room.isPublic ? null : room.owner, // Public rooms must have null owner
+      owner: isPublicRoom ? null : room.owner, // Public rooms must have null owner
       settings: room.settings,
       state: {
         id: room.state,
@@ -919,7 +923,7 @@ io.on('connection', (socket) => {
           drawCommands: room.drawCommands
         } : {}
       },
-      isPublic: room.isPublic || false // Explicitly set isPublic flag
+      isPublic: isPublicRoom // Explicitly set isPublic flag (true for public, false for private)
     };
     
     // Add room code for private rooms (for invite links)
