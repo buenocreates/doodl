@@ -4536,3 +4536,15 @@ html[data-halloween] #home .logo-big img {
 html[data-halloween] #game-logo a img {
     content: url(/img/logo_halloween.gif)
 }
+
+/* Make favicon circular - applies to favicon when displayed as image */
+/* For browser tab favicon, the image itself should be square for best results */
+/* Browsers will automatically make it circular in most cases */
+.favicon-circular,
+img[src*="fulllogo.png"][alt*="favicon"] {
+    border-radius: 50%;
+    object-fit: cover;
+    width: 32px;
+    height: 32px;
+    display: block;
+}
