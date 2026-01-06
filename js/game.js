@@ -3055,16 +3055,18 @@
     D(_n[1], "focus", function(e) {
         function t(e) {
             h.removeEventListener("scroll", t),
-            h.scroll(0, 0),
-            e.preventDefault()
+            h.scroll(0, 0)
+            // Don't prevent default - allow native mobile keyboard
+            // e.preventDefault()
         }
         uo(),
         On.classList.add("mobile-input-focus"),
+        // Only use custom keyboard if explicitly enabled, otherwise use native
         ae && (h.addEventListener("scroll", t),
         setTimeout(function() {
             t(e)
-        }, 200),
-        e.preventDefault())
+        }, 200))
+        // Removed e.preventDefault() to allow native mobile keyboard
     }),
     D(_n[1], "blur", function(e) {
         uo(),

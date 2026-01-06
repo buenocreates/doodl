@@ -57,6 +57,7 @@
         <link rel="icon" type="image/png" href="img/favicon1.png">
         <link rel="shortcut icon" type="image/png" href="img/favicon1.png">
         <link rel="apple-touch-icon" href="img/favicon1.png">
+        <link rel="preload" as="image" href="/img/background.png">
         <svg style="position: absolute; width: 0; height: 0;" aria-hidden="true" focusable="false">
             <defs>
                 <filter id="remove-white-outline" x="-50%" y="-50%" width="200%" height="200%">
@@ -230,7 +231,7 @@
                 <div id="game-players-footer"></div>
                 <div id="game-chat-input-mobile">
                     <form class="chat-form">
-                        <input type="text" autocomplete="off" placeholder="Type your guess here..." maxlength="100" data-translate="placeholder">
+                        <input type="text" inputmode="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="Type your guess here..." maxlength="100" data-translate="placeholder">
                         <div class="characters"></div>
                     </form>
                 </div>
@@ -433,7 +434,7 @@
                     </div>
                     <div class="chat-content"></div>
                     <form class="chat-form">
-                        <input type="text" autocomplete="off" placeholder="Type your guess here..." maxlength="100" data-translate="placeholder">
+                        <input type="text" inputmode="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="Type your guess here..." maxlength="100" data-translate="placeholder">
                         <div class="characters"></div>
                     </form>
                 </div>
