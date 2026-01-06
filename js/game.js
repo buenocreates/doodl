@@ -619,6 +619,7 @@
     Ge.de = {
         "You have been kicked!": "Du wurdest gekickt!",
         "You have been banned!": "Du wurdest gebannt!",
+        "The lobby is empty. Returning to home screen.": "Die Lobby ist leer. Zurück zur Startseite.",
         "You muted '$'!": "Du hast '$' stummgeschalten!",
         "You unmuted '$'!": "Du hast die Stummschaltung für '$' aufgehoben!",
         "You are on a kick cooldown!": "Du bist noch in der Kick Abklingzeit!",
@@ -1784,8 +1785,8 @@
         }),
         S.on("reason", function(e) {
             o = e;
-            // IMMEDIATELY disable all input when kicked/banned
-            if (e == 1 || e == 2) {
+            // IMMEDIATELY disable all input when kicked/banned/lobby empty
+            if (e == 1 || e == 2 || e == 3) {
                 // Disable both input fields immediately
                 if (_n[0]) {
                     _n[0].disabled = true;
@@ -2176,6 +2177,8 @@
                     message = E("You have been kicked!");
                 } else if (kickReason == '2') {
                     message = E("You have been banned!");
+                } else if (kickReason == '3') {
+                    message = E("The lobby is empty. Returning to home screen.");
                 }
                 if (message) {
                     try {
@@ -3153,6 +3156,8 @@
                     message = E("You have been kicked!");
                 } else if (kickReason == '2') {
                     message = E("You have been banned!");
+                } else if (kickReason == '3') {
+                    message = E("The lobby is empty. Returning to home screen.");
                 }
                 if (message) {
                     try {

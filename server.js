@@ -891,9 +891,10 @@ io.on('connection', (socket) => {
     }
     
     // Send game data (include room code for private rooms)
+    // CRITICAL: For public rooms, type must be 0 and owner must be null to show waiting screen
     const gameData = {
       me: socket.id,
-      type: create === 1 || create === '1' ? 1 : 0,
+      type: room.isPublic ? 0 : (create === 1 || create === '1' ? 1 : 0), // Public = 0, Private = 1
       id: roomId,
       users: room.players.map(p => ({
         id: p.id,
@@ -904,7 +905,7 @@ io.on('connection', (socket) => {
         flags: p.flags
       })),
       round: room.currentRound,
-      owner: room.owner,
+      owner: room.isPublic ? null : room.owner, // Public rooms must have null owner
       settings: room.settings,
       state: {
         id: room.state,
@@ -918,7 +919,7 @@ io.on('connection', (socket) => {
           drawCommands: room.drawCommands
         } : {}
       },
-      isPublic: room.isPublic || false
+      isPublic: room.isPublic || false // Explicitly set isPublic flag
     };
     
     // Add room code for private rooms (for invite links)
@@ -943,6 +944,42 @@ io.on('connection', (socket) => {
         flags: 0
       }
     });
+    
+    // For public rooms in LOBBY, also send updated GAME_DATA to all existing players
+    // to ensure they see the waiting screen (not settings) when new players join
+    if (room.isPublic && room.state === GAME_STATE.LOBBY) {
+      // Send updated GAME_DATA to each existing player with their own 'me' value
+      room.players.forEach(p => {
+        if (p.id !== socket.id) { // Don't send to the new player (they already got it)
+          const updatedGameData = {
+            me: p.id, // Each player's own ID
+            type: 0, // Public room
+            id: room.id,
+            users: room.players.map(pl => ({
+              id: pl.id,
+              name: pl.name,
+              avatar: pl.avatar,
+              score: pl.score,
+              guessed: pl.guessed === true ? true : false,
+              flags: pl.flags
+            })),
+            round: room.currentRound,
+            owner: null, // Public rooms have no owner
+            settings: room.settings,
+            state: {
+              id: room.state,
+              time: 0,
+              data: {}
+            },
+            isPublic: true
+          };
+          io.to(p.id).emit('data', {
+            id: PACKET.GAME_DATA,
+            data: updatedGameData
+          });
+        }
+      });
+    }
     
     // Auto-start public rooms when exactly 8 players join
     if (room.isPublic && room.state === GAME_STATE.LOBBY) {
@@ -1644,72 +1681,32 @@ io.on('connection', (socket) => {
             // Only 1 player left - behavior depends on game state and room type
             const remainingPlayer = room.players[0];
             
-            // For public lobbies, if in LOBBY state, stay in LOBBY (waiting for players)
+            // For public lobbies, if in LOBBY state, kick the last player back to home
             if (room.isPublic && room.state === GAME_STATE.LOBBY) {
-              console.log(`⏸️ Only 1 player left in public LOBBY room ${currentRoomId}, staying in lobby (waiting for players)`);
-              // CRITICAL: Ensure public room has no owner (this determines settings vs waiting screen)
-              room.owner = null;
-              // Reset round to 0 for public lobbies so it shows "waiting for players" correctly
-              room.currentRound = 0;
-              // Clear any active timers to prevent countdown
-              if (room.timerInterval) {
-                clearInterval(room.timerInterval);
-                room.timerInterval = null;
-              }
-              if (room.hintInterval) {
-                clearInterval(room.hintInterval);
-                room.hintInterval = null;
-              }
-              if (room.wordChoiceTimer) {
-                clearInterval(room.wordChoiceTimer);
-                room.wordChoiceTimer = null;
-              }
-              // Set timer to 0 and ensure it stays at 0
-              room.timer = 0;
-              // Stay in LOBBY state - don't go to settings screen
-              io.to(currentRoomId).emit('data', {
-                id: PACKET.STATE,
-                data: {
-                  id: GAME_STATE.LOBBY,
-                  time: 0,
-                  data: {}
+              console.log(`🏠 Only 1 player left in public LOBBY room ${currentRoomId}, kicking them back to home (lobby is empty)`);
+              
+              // Get the remaining player's socket
+              const remainingPlayerSocket = io.sockets.sockets.get(remainingPlayer.id);
+              if (remainingPlayerSocket) {
+                // Send reason event (similar to kick) - use reason code 3 for "lobby is empty"
+                // Reason codes: 1 = kicked, 2 = banned, 3 = lobby empty
+                remainingPlayerSocket.emit('reason', 3);
+                
+                // Remove player from room
+                const playerIndex = room.players.findIndex(p => p.id === remainingPlayer.id);
+                if (playerIndex !== -1) {
+                  room.players.splice(playerIndex, 1);
                 }
-              });
-              // Send TIMER packet to ensure timer displays 0 (no countdown)
-              io.to(currentRoomId).emit('data', {
-                id: PACKET.TIMER,
-                data: 0
-              });
-              // Also send GAME_DATA to ensure client knows it's a public lobby
-              // Make sure owner is null and type is 0 for public rooms
-              // Use same format as initial GAME_DATA
-              const gameData = {
-                me: remainingPlayer.id,
-                type: 0, // 0 = public room (no settings screen), 1 = private
-                id: room.id,
-                users: room.players.map(p => ({
-                  id: p.id,
-                  name: p.name,
-                  avatar: p.avatar,
-                  score: p.score,
-                  guessed: p.guessed === true ? true : false,
-                  flags: p.flags
-                })),
-                round: room.currentRound,
-                owner: null, // Public rooms have no owner - CRITICAL for showing waiting screen
-                settings: room.settings,
-                state: {
-                  id: room.state,
-                  time: 0,
-                  data: {}
-                },
-                isPublic: true // Explicitly mark as public
-              };
-              io.to(currentRoomId).emit('data', {
-                id: PACKET.GAME_DATA,
-                data: gameData
-              });
-              return; // Don't continue with owner/private room logic
+                
+                // Clean up player data
+                players.delete(remainingPlayer.id);
+                remainingPlayerSocket.leave(currentRoomId);
+                
+                // Delete the empty room
+                rooms.delete(currentRoomId);
+                console.log('🗑️ Public lobby deleted (empty):', currentRoomId);
+              }
+              return; // Don't continue with other logic
             }
             
             // Make the remaining player the new owner (for private rooms only)
