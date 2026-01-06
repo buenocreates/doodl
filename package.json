@@ -1,7 +1,7 @@
 {
-  "name": "skribbl-clone",
+  "name": "doodl",
   "version": "1.0.0",
-  "description": "Skribbl.io clone",
+  "description": "doodl - Free Multiplayer Drawing & Guessing Game",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -15,7 +15,7 @@
   "devDependencies": {
     "nodemon": "^3.0.1"
   },
-  "keywords": ["skribbl", "drawing", "game"],
+  "keywords": ["doodl", "drawing", "game"],
   "author": "",
   "license": "MIT"
 }

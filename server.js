@@ -45,7 +45,10 @@ app.use(express.static(__dirname, {
 
 // Serve favicon
 app.get('/favicon.png', (req, res) => {
-  res.sendFile(path.join(__dirname, 'favicon.png'));
+  res.sendFile(path.join(__dirname, 'favicon1.png'));
+});
+app.get('/favicon1.png', (req, res) => {
+  res.sendFile(path.join(__dirname, 'favicon1.png'));
 });
 
 // Handle room code URLs (e.g., /?UsCN6Pnv or /?room=UsCN6Pnv)
@@ -324,11 +327,12 @@ app.post('/api/play', (req, res) => {
     } else if (!roomId) {
       // No roomId provided - this could be:
       // 1. Public room join (Play button) - find available lobby or create new one
-      // Public rooms: fixed settings, auto-start at 3+ players, max 8 players
+      // Public rooms: fixed settings, auto-start at exactly 8 players, max 8 players
       // Settings: [LANG, SLOTS, DRAWTIME, ROUNDS, WORDCOUNT, HINTCOUNT, WORDMODE, CUSTOMWORDSONLY]
-      // Fixed: [0, 8, 80, 3, 6, 0, 0, 0] = English, 8 max, 80s draw, 3 rounds, 6 words
+      // Fixed: [0, 8, 80, 3, 3, 2, 0, 0] = English, 8 max, 80s draw, 3 rounds, 3 words per round, 2 hints
       
       // Find an available public lobby (in LOBBY state with < 8 players)
+      // IMPORTANT: Only join LOBBY state rooms, never join running games
       let availableRoom = null;
       for (const [id, room] of rooms.entries()) {
         if (room.isPublic && 
@@ -362,7 +366,7 @@ app.post('/api/play', (req, res) => {
           hintInterval: null,
           hintIndex: 0,
           isPublic: true,
-          autoStartTimer: null // Timer for auto-starting when 3+ players
+          autoStartTimer: null // Timer for auto-starting when exactly 8 players
         };
         rooms.set(roomId, availableRoom);
         console.log('✅ Created new public lobby:', roomId);
@@ -793,12 +797,62 @@ io.on('connection', (socket) => {
       console.log('✅ Created room:', roomId, 'isPublic:', room.isPublic);
     }
     
-    const room = rooms.get(roomId);
+    let room = rooms.get(roomId);
     if (!room) {
       console.log('⚠️ Room not found in Socket.IO login:', roomId);
       socket.emit('joinerr', 1); // Room not found
       return;
     }
+    
+    // For public rooms, only allow joining if room is in LOBBY state
+    // Never allow joining a running public game - redirect to waiting lobby
+    if (room.isPublic && room.state !== GAME_STATE.LOBBY) {
+      console.log('⚠️ Cannot join running public game:', roomId, 'state:', room.state, '- finding waiting lobby');
+      // Find an available waiting lobby
+      let newLobbyId = null;
+      for (const [id, r] of rooms.entries()) {
+        if (r.isPublic && r.state === GAME_STATE.LOBBY && r.players.length < 8) {
+          newLobbyId = id;
+          break;
+        }
+      }
+      
+      // If no available lobby, create one
+      if (!newLobbyId) {
+        newLobbyId = `PUBLIC-${lang}-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+        const newLobby = {
+          id: newLobbyId,
+          players: [],
+          settings: [0, 8, 80, 3, 3, 2, 0, 0],
+          state: GAME_STATE.LOBBY,
+          currentRound: 0,
+          currentDrawer: -1,
+          currentWord: '',
+          currentWordIndex: -1,
+          timer: 0,
+          drawCommands: [],
+          customWords: null,
+          owner: null,
+          startTime: null,
+          timerInterval: null,
+          hintInterval: null,
+          hintIndex: 0,
+          isPublic: true,
+          autoStartTimer: null
+        };
+        rooms.set(newLobbyId, newLobby);
+        console.log('✅ Created new waiting lobby for player trying to join running game:', newLobbyId);
+      }
+      
+      // Update roomId to the new lobby
+      roomId = newLobbyId;
+      room = rooms.get(roomId);
+      if (!room) {
+        socket.emit('joinerr', 1);
+        return;
+      }
+    }
+    
     if (room.players.length >= room.settings[SETTINGS.SLOTS]) {
       console.log('⚠️ Room is full:', roomId, `(${room.players.length}/${room.settings[SETTINGS.SLOTS]} players)`);
       socket.emit('joinerr', 2); // Room full
@@ -882,7 +936,7 @@ io.on('connection', (socket) => {
       }
     });
     
-    // Auto-start public rooms when 3+ players join
+    // Auto-start public rooms when exactly 8 players join
     if (room.isPublic && room.state === GAME_STATE.LOBBY) {
       // Clear any existing auto-start timer
       if (room.autoStartTimer) {
@@ -890,16 +944,36 @@ io.on('connection', (socket) => {
         room.autoStartTimer = null;
       }
       
-      // If we have 3+ players, auto-start after a short delay (2 seconds)
-      if (room.players.length >= 3) {
-        console.log(`🎮 Auto-starting public room ${roomId} with ${room.players.length} players`);
-        room.autoStartTimer = setTimeout(() => {
-          // Double-check we still have 3+ players and are in lobby
-          if (room.players.length >= 3 && room.state === GAME_STATE.LOBBY) {
-            startGame(room);
-          }
-          room.autoStartTimer = null;
-        }, 2000); // 2 second delay to allow more players to join
+      // If we have exactly 8 players, auto-start immediately
+      if (room.players.length === 8) {
+        console.log(`🎮 Auto-starting public room ${roomId} with exactly 8 players`);
+        // Start the game immediately
+        startGame(room);
+        
+        // Create a new waiting lobby for future players
+        const newLobbyId = `PUBLIC-${lang}-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+        const newLobby = {
+          id: newLobbyId,
+          players: [],
+          settings: [0, 8, 80, 3, 3, 2, 0, 0], // Fixed settings: English, 8 max, 80s, 3 rounds, 3 words per round, 2 hints
+          state: GAME_STATE.LOBBY,
+          currentRound: 0,
+          currentDrawer: -1,
+          currentWord: '',
+          currentWordIndex: -1,
+          timer: 0,
+          drawCommands: [],
+          customWords: null,
+          owner: null,
+          startTime: null,
+          timerInterval: null,
+          hintInterval: null,
+          hintIndex: 0,
+          isPublic: true,
+          autoStartTimer: null
+        };
+        rooms.set(newLobbyId, newLobby);
+        console.log('✅ Created new waiting lobby:', newLobbyId);
       }
       }
     } catch (error) {
@@ -1348,14 +1422,9 @@ io.on('connection', (socket) => {
           const wasInWordChoice = room.state === GAME_STATE.WORD_CHOICE;
           room.players.splice(index, 1);
             
-            // Clear auto-start timer for public rooms if player count drops below 3
-            if (room.isPublic && room.autoStartTimer) {
-              if (room.players.length < 3) {
-                clearTimeout(room.autoStartTimer);
-                room.autoStartTimer = null;
-                console.log(`⏸️ Auto-start cancelled for public room ${currentRoomId} - only ${room.players.length} players`);
-              }
-            }
+            // For public rooms in LOBBY state, if players drop below 8, the game won't start
+            // (Games only start with exactly 8 players, so no need to cancel timer)
+            // If game is running and players leave, they continue - new players go to waiting lobbies
           
           // If drawer left during WORD_CHOICE, move to next drawer and restart timer
           if (wasDrawer && wasInWordChoice) {
@@ -1605,11 +1674,11 @@ io.on('connection', (socket) => {
   
   function startGame(room) {
     // Check minimum players requirement
-    // Public rooms need 3+ players, private rooms need 2+
-    const minPlayers = room.isPublic ? 3 : 2;
+    // Public rooms need exactly 8 players, private rooms need 2+
+    const minPlayers = room.isPublic ? 8 : 2;
     if (room.players.length < minPlayers) {
       if (room.isPublic) {
-        // For public rooms, just return - game will auto-start when 3+ players join
+        // For public rooms, just return - game will auto-start when exactly 8 players join
         return;
       } else {
         // Notify owner that minimum players are required
@@ -1621,6 +1690,12 @@ io.on('connection', (socket) => {
         }
       return;
       }
+    }
+    
+    // For public rooms, ensure we have exactly 8 players
+    if (room.isPublic && room.players.length !== 8) {
+      console.log(`⚠️ Public room ${room.id} has ${room.players.length} players, need exactly 8`);
+      return;
     }
     
     room.currentRound = 0;
@@ -2113,7 +2188,7 @@ io.on('connection', (socket) => {
     }, 1000);
   }
   
-  // Handle votekick logic (like skribbl.io)
+  // Handle votekick logic (like doodl)
   function handleVotekick(room, voterId, targetId) {
     // Can't votekick yourself or the owner
     if (voterId === targetId || targetId === room.owner) {
@@ -2179,7 +2254,7 @@ io.on('connection', (socket) => {
       return;
     }
     
-    // Calculate required votes based on lobby size (like skribbl.io)
+    // Calculate required votes based on lobby size (like doodl)
     // 2-3 players: need 2 votes minimum
     // 4+ players: need 2 votes minimum
     const playerCount = room.players.length;

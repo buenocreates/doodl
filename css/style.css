@@ -1076,16 +1076,14 @@ body .snow {
     border-radius: var(--BORDER_RADIUS);
     display: flex;
     flex-direction: column;
-    overflow: visible;
-    padding-left: 0
+    overflow: visible
 }
 
 #game-players .players-list {
     flex: 1 1 auto;
     display: flex;
     flex-direction: column;
-    height: 32px;
-    padding-left: 0
+    height: 32px
 }
 
 #game-players .player-amount {
@@ -1335,24 +1333,24 @@ body .snow {
 }
 
 #game-players .player .player-info {
-    width: calc(100% - var(--UNIT));
+    width: 100%;
     height: 100%;
     position: relative;
-    text-align: center;
+    text-align: right;
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    margin: 0 auto;
-    padding-right: 0
+    padding-right: var(--UNIT);
+    padding-left: 40px
 }
 
 #game-players .player .player-name {
-    width: 100%;
+    width: auto;
     font-size: 1em;
     line-height: 1em;
     font-weight: 700;
-    text-align: center
+    text-align: right
 }
 
 #game-players .player .player-name.me {
@@ -1361,10 +1359,10 @@ body .snow {
 }
 
 #game-players .player .player-score {
-    width: 100%;
+    width: auto;
     font-size: .9em;
     line-height: 1em;
-    text-align: center
+    text-align: right
 }
 
 #game-players .player .player-tag {
@@ -1383,9 +1381,7 @@ body .snow {
     font-weight: 700;
     font-size: 1.1em;
     top: 5px;
-    left: 0;
-    padding-left: 4px;
-    z-index: 10
+    left: 6px
 }
 
 #game-invite {

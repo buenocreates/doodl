@@ -1,6 +1,6 @@
-# Skribbl.io Clone
+# doodl
 
-A multiplayer drawing and guessing game clone of skribbl.io.
+A free multiplayer drawing and guessing game with SOL prize pools.
 
 ## Features
 
@@ -38,7 +38,7 @@ npm run dev
 2. Click "New +" → "Web Service"
 3. Connect your GitHub repository (or use public repo URL)
 4. Configure:
-   - **Name**: skribbl-clone (or any name)
+   - **Name**: doodl (or any name)
    - **Environment**: Node
    - **Build Command**: `npm install`
    - **Start Command**: `npm start`

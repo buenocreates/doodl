@@ -270,7 +270,7 @@
               , n = x == En  // Current player is owner
               , l = (In !== void 0 && In !== null && In !== -1) ? In : !0  // Default to public if In not set (for backwards compat)
               , u = i.querySelector(".button-pair");  // Kick/Ban buttons
-            // Show/hide buttons based on context (like official skribbl.io but with public/private logic):
+            // Show/hide buttons based on context (like official doodl but with public/private logic):
             // - If clicking yourself: show invite only, hide all buttons
             // - If clicking others in public room: show Votekick, Mute, Report (no Kick/Ban)
             // - If clicking others in private room AND you're owner: show Kick, Ban, Votekick, Mute, Report
@@ -2308,7 +2308,7 @@
     }
     function ga(e) {
         if (!e || typeof e !== "string") return;
-        // Official way - exactly like skribbl.io
+        // Official way - exactly like doodl
         (!N[2].hints || N[2].hints.length < e.length) && pa([e.length], !0);
         for (var t = [], n = 0; n < e.length; n++) 
             t.push([n, e.charAt(n)]);
@@ -2522,7 +2522,7 @@
                 })(),
                 Fa(a, !0),
                 R.playSound(xn),
-                // Reveal the word with animation ONLY for the person who guessed (like official skribbl.io)
+                // Reveal the word with animation ONLY for the person who guessed (like official doodl)
                 n.id == x && ga(n.word)
             ),
             Ka()  // Update score display (always update leaderboard)
