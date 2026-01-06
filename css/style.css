@@ -318,12 +318,12 @@
     --DROPSHADOW: drop-shadow(3px 3px 0px rgba(0, 0, 0, 0.25));
     --PLAYERS_PER_PAGE: -1;
     --COLOR_TEXT_CANVAS_TRANSPARENT: #404040;
-    --COLOR_PANEL_BG: rgba(12, 44, 150, 0.75);
-    --COLOR_PANEL_LO: rgba(7, 36, 131, 0.75);
-    --COLOR_PANEL_HI: #1640c9;
+    --COLOR_PANEL_BG: rgba(80, 80, 80, 0.75);
+    --COLOR_PANEL_LO: rgba(70, 70, 70, 0.75);
+    --COLOR_PANEL_HI: #8a8a8a;
     --COLOR_PANEL_FOCUS: #ee9631;
     --COLOR_PANEL_BORDER: #040a33;
-    --COLOR_PANEL_BORDER_FOCUS: #56b2fd;
+    --COLOR_PANEL_BORDER_FOCUS: #a0a0a0;
     --COLOR_PANEL_TEXT: #f0f0f0;
     --COLOR_PANEL_TEXT_FOCUS: white;
     --COLOR_PANEL_TEXT_PLACEHOLDER: #9b9b9b;
@@ -341,8 +341,8 @@
     --COLOR_INPUT_HOVER: white;
     --COLOR_INPUT_TEXT: #2c2c2c;
     --COLOR_INPUT_BORDER: #707070;
-    --COLOR_INPUT_BORDER_FOCUS: #56b2fd;
-    --COLOR_TOOL_TIP_BG: #4571ff;
+    --COLOR_INPUT_BORDER_FOCUS: #a0a0a0;
+    --COLOR_TOOL_TIP_BG: #888888;
     --COLOR_GAMEBAR_TEXT: #000;
     --COLOR_GAMEBAR_ROUND_TEXT: #000;
     --COLOR_GAMEBAR_WORD_DESCRIPTION: #363636;
@@ -384,7 +384,7 @@ body {
     font-family: Nunito,sans-serif;
     padding: 0!important;
     margin: 0!important;
-    background-color: #124da5;
+    background-color: #6b6b6b;
     background-image: url(/img/background.png);
     background-repeat: repeat;
     background-size: 350px;
@@ -396,7 +396,7 @@ body {
 }
 
 a {
-    color: #b4baff
+    color: #b0b0b0
 }
 
 button {
@@ -870,22 +870,22 @@ input[type=checkbox]:checked::before {
 }
 
 html[data-theme=dark] {
-    --COLOR_PANEL_BG: rgba(8, 36, 129, 0.75);
-    --COLOR_PANEL_LO: rgba(7, 36, 131, 0.75);
-    --COLOR_PANEL_HI: #1640c9;
+    --COLOR_PANEL_BG: rgba(75, 75, 75, 0.75);
+    --COLOR_PANEL_LO: rgba(70, 70, 70, 0.75);
+    --COLOR_PANEL_HI: #8a8a8a;
     --COLOR_PANEL_FOCUS: #ee9631;
     --COLOR_PANEL_BORDER: #040a33;
-    --COLOR_PANEL_BORDER_FOCUS: #56b2fd;
+    --COLOR_PANEL_BORDER_FOCUS: #a0a0a0;
     --COLOR_PANEL_TEXT: #f0f0f0;
     --COLOR_PANEL_TEXT_FOCUS: white;
     --COLOR_PANEL_TEXT_PLACEHOLDER: #aaaaaa;
-    --COLOR_INPUT_BG: #0b2a61;
-    --COLOR_INPUT_HOVER: #0b2a61;
+    --COLOR_INPUT_BG: #4a4a4a;
+    --COLOR_INPUT_HOVER: #4a4a4a;
     --COLOR_INPUT_TEXT: white;
-    --COLOR_INPUT_BORDER: #214688;
-    --COLOR_INPUT_BORDER_FOCUS: #56b2fd;
-    --COLOR_TOOL_BASE: #3e50b6;
-    --COLOR_TOOL_HOVER: #2f3f9b;
+    --COLOR_INPUT_BORDER: #6a6a6a;
+    --COLOR_INPUT_BORDER_FOCUS: #a0a0a0;
+    --COLOR_TOOL_BASE: #707070;
+    --COLOR_TOOL_HOVER: #606060;
     --COLOR_TOOL_TEXT: white;
     --COLOR_TOOL_SIZE_BASE: gray;
     --COLOR_TOOL_SIZE_HOVER: darkgray;
@@ -894,14 +894,14 @@ html[data-theme=dark] {
     --COLOR_GAMEBAR_ROUND_TEXT: white;
     --COLOR_GAMEBAR_WORD_DESCRIPTION: #c2c2c2;
     --COLOR_CHAT_TEXT_BASE: #fff;
-    --COLOR_CHAT_BG_BASE: rgba(7, 36, 131, 0.75);
-    --COLOR_CHAT_BG_ALT: rgba(7, 36, 131, 0.75);
+    --COLOR_CHAT_BG_BASE: rgba(70, 70, 70, 0.75);
+    --COLOR_CHAT_BG_ALT: rgba(70, 70, 70, 0.75);
     --COLOR_CHAT_BG_GUESSED_BASE: #026130;
     --COLOR_CHAT_BG_GUESSED_ALT: #004622;
     --COLOR_CHAT_INPUT_COUNT: white;
     --COLOR_PLAYER_TEXT_BASE: #fff;
-    --COLOR_PLAYER_BG_BASE: rgba(7, 36, 131, 0.75);
-    --COLOR_PLAYER_BG_ALT: rgba(7, 36, 131, 0.75);
+    --COLOR_PLAYER_BG_BASE: rgba(70, 70, 70, 0.75);
+    --COLOR_PLAYER_BG_ALT: rgba(70, 70, 70, 0.75);
     --COLOR_PLAYER_BG_GUESSED_BASE: rgba(2, 97, 48, 0.75);
     --COLOR_PLAYER_BG_GUESSED_ALT: rgba(2, 97, 48, 0.75)
 }
@@ -992,16 +992,24 @@ body .snow {
     display: flex;
     justify-content: space-between;
     align-items: flex-end;
-    height: 90px
+    height: 90px;
+    margin-top: 10px;
+    margin-bottom: 0;
+    padding-bottom: 0
+}
+
+#game-logo a {
+    margin-bottom: 0;
+    padding-bottom: 0
 }
 
 #game-logo a img {
     width: 320px;
     height: auto;
-    filter: drop-shadow(3px 3px 0 rgba(0, 0, 0, .25)) contrast(1.15) brightness(1.05) saturate(1.2);
-    display: block;
-    image-rendering: -webkit-optimize-contrast;
-    image-rendering: crisp-edges;
+    filter: drop-shadow(3px 3px 0 rgba(0, 0, 0, .25));
+    margin-bottom: 0;
+    padding-bottom: 0;
+    display: block
 }
 
 #game-wrapper {
@@ -1068,14 +1076,16 @@ body .snow {
     border-radius: var(--BORDER_RADIUS);
     display: flex;
     flex-direction: column;
-    overflow: visible
+    overflow: visible;
+    padding-left: 0
 }
 
 #game-players .players-list {
     flex: 1 1 auto;
     display: flex;
     flex-direction: column;
-    height: 32px
+    height: 32px;
+    padding-left: 0
 }
 
 #game-players .player-amount {
@@ -1325,21 +1335,24 @@ body .snow {
 }
 
 #game-players .player .player-info {
-    width: 100%;
+    width: calc(100% - var(--UNIT));
     height: 100%;
     position: relative;
     text-align: center;
     display: flex;
     flex-direction: column;
     justify-content: center;
-    padding-right: var(--UNIT)
+    align-items: center;
+    margin: 0 auto;
+    padding-right: 0
 }
 
 #game-players .player .player-name {
     width: 100%;
     font-size: 1em;
     line-height: 1em;
-    font-weight: 700
+    font-weight: 700;
+    text-align: center
 }
 
 #game-players .player .player-name.me {
@@ -1350,7 +1363,8 @@ body .snow {
 #game-players .player .player-score {
     width: 100%;
     font-size: .9em;
-    line-height: 1em
+    line-height: 1em;
+    text-align: center
 }
 
 #game-players .player .player-tag {
@@ -1360,12 +1374,18 @@ body .snow {
     font-weight: 700
 }
 
+#game-players .player {
+    padding-left: 0
+}
+
 #game-players .player .player-rank {
     position: absolute;
     font-weight: 700;
     font-size: 1.1em;
     top: 5px;
-    left: 6px
+    left: 0;
+    padding-left: 4px;
+    z-index: 10
 }
 
 #game-invite {
@@ -2909,8 +2929,37 @@ form.chat-form input {
     min-height: 100vh;
     display: flex;
     flex-direction: column;
-    align-items: center
+    align-items: center;
+    padding: 30px 20px;
+    box-sizing: border-box
 }
+
+#home .home-header {
+    width: 100%;
+    max-width: 1200px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 40px;
+    padding-top: 20px
+}
+
+#home .home-main {
+    width: 100%;
+    max-width: 1200px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 30px;
+    flex: 1
+}
+
+#home .game-panel-wrapper {
+    width: 100%;
+    display: flex;
+    justify-content: center
+}
+
 
 #home .ad-top {
     width: 100%;
@@ -2928,33 +2977,50 @@ form.chat-form input {
 }
 
 #home .logo-big {
-    margin-top: 25px;
-    margin-bottom: 40px;
+    margin-top: 0;
+    margin-bottom: 25px;
+    width: 100%;
     display: flex;
-    justify-content: center;
+    flex-direction: column;
     align-items: center;
-    padding: 0;
+    animation: fadeInDown 0.6s ease-out
 }
 
-#home .logo-big a {
-    display: block;
-    padding: 0;
-    margin: 0;
+@keyframes fadeInDown {
+    from {
+        opacity: 0;
+        transform: translateY(-20px)
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0)
+    }
+}
+
+#home .logo-big .logo-link {
+    display: inline-block;
+    text-decoration: none;
+    cursor: pointer;
+    transition: transform 0.3s ease
+}
+
+#home .logo-big .logo-link:hover {
+    transform: scale(1.02)
 }
 
 #home .logo-big img {
-    max-width: 500px;
+    max-width: 600px;
     width: auto;
     height: auto;
-    filter: drop-shadow(3px 3px 0 rgba(0, 0, 0, .25)) contrast(1.15) brightness(1.05) saturate(1.2);
+    filter: drop-shadow(3px 3px 0 rgba(0, 0, 0, .25));
+    clip-path: inset(10% 0 20% 0);
     display: block;
-    margin: 0 auto;
-    image-rendering: -webkit-optimize-contrast;
-    image-rendering: crisp-edges;
+    margin: 0;
+    padding: 0
 }
 
 #home .logo-big .avatar-container {
-    margin-top: 10px;
+    margin-top: 0;
     height: 48px;
     display: flex;
     justify-content: center;
@@ -3015,26 +3081,42 @@ form.chat-form input {
 
 #home .panel {
     flex: 0 0 auto;
-    width: 400px;
+    width: 100%;
     background-color: var(--COLOR_PANEL_BG);
     border-radius: var(--BORDER_RADIUS);
-    padding: 15px
+    padding: 15px;
+    transition: transform 0.2s ease, box-shadow 0.2s ease
 }
 
+#home .game-panel {
+    max-width: 450px;
+    animation: fadeInUp 0.6s ease-out 0.2s both;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2)
+}
+
+#home .game-panel:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25)
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px)
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0)
+    }
+}
+
+
 #home .panel-left {
-    margin-right: 8px;
-    flex: 1 1 50%;
-    display: flex;
-    align-items: flex-end;
-    justify-content: flex-end
+    display: none
 }
 
 #home .panel-right {
-    margin-left: 8px;
-    flex: 1 1 50%;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between
+    display: none
 }
 
 #home .socials {
@@ -3092,22 +3174,44 @@ form.chat-form input {
 }
 
 #home .button-play {
-    background-color: #53e237;
+    background: linear-gradient(135deg, #53e237 0%, #38c41c 100%);
     text-shadow: 2px 2px 0 #0000002b;
-    transition: background-color 80ms;
+    transition: all 0.2s ease;
     border-radius: var(--BORDER_RADIUS);
     font-size: 2em;
     height: 54px;
-    width: 100%
+    width: 100%;
+    box-shadow: 0 4px 10px rgba(83, 226, 55, 0.3);
+    position: relative;
+    overflow: hidden
+}
+
+#home .button-play::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.5s ease
 }
 
 #home .button-play:hover:not(:disabled) {
-    background-color: #38c41c
+    background: linear-gradient(135deg, #38c41c 0%, #30aa19 100%);
+    box-shadow: 0 6px 15px rgba(83, 226, 55, 0.4);
+    transform: translateY(-2px)
+}
+
+#home .button-play:hover:not(:disabled)::before {
+    left: 100%
 }
 
 #home .button-play:active:not(:disabled) {
-    background-color: #30aa19;
-    padding-top: 2px
+    background: linear-gradient(135deg, #30aa19 0%, #2a9515 100%);
+    padding-top: 2px;
+    transform: translateY(0);
+    box-shadow: 0 2px 5px rgba(83, 226, 55, 0.3)
 }
 
 #home .button-play img {
@@ -3120,24 +3224,29 @@ form.chat-form input {
 }
 
 #home .button-create {
-    background-color: #2c8de7;
+    background: linear-gradient(135deg, #2c8de7 0%, #1671c5 100%);
     text-shadow: 2px 2px 0 #0000002b;
-    transition: background-color 80ms;
+    transition: all 0.2s ease;
     height: 40px;
     border-radius: var(--BORDER_RADIUS);
     width: 100%;
     font-size: 1.2em;
     font-weight: 700;
-    margin-top: 10px
+    margin-top: 10px;
+    box-shadow: 0 3px 8px rgba(44, 141, 231, 0.3)
 }
 
 #home .button-create:hover:not(:disabled) {
-    background-color: #1671c5
+    background: linear-gradient(135deg, #1671c5 0%, #1361a9 100%);
+    box-shadow: 0 5px 12px rgba(44, 141, 231, 0.4);
+    transform: translateY(-2px)
 }
 
 #home .button-create:active:not(:disabled) {
-    background-color: #1361a9;
-    padding-top: 2px
+    background: linear-gradient(135deg, #1361a9 0%, #0f5190 100%);
+    padding-top: 2px;
+    transform: translateY(0);
+    box-shadow: 0 2px 5px rgba(44, 141, 231, 0.3)
 }
 
 #home .button-create img {
@@ -3266,17 +3375,24 @@ form.chat-form input {
 }
 
 #home .bottom {
-    width: 100%;
+    width: calc(100% + 40px);
+    margin-left: -20px;
+    margin-right: -20px;
+    margin-bottom: -30px;
     flex: 1 0 auto;
     display: flex;
     flex-direction: column;
-    justify-content: flex-end
+    justify-content: flex-end;
+    padding: 0
 }
 
 #home .bottom svg {
     width: 100%;
     height: 40px;
-    fill: var(--COLOR_PANEL_BG)
+    fill: var(--COLOR_PANEL_BG);
+    margin: 0;
+    padding: 0;
+    display: block
 }
 
 #home .bottom .footer {
@@ -3290,7 +3406,8 @@ form.chat-form input {
     width: 100%;
     text-align: center;
     font-size: .8em;
-    color: #677af9
+    color: #b0b0b0;
+    text-shadow: 0 0 6px rgba(176, 176, 176, 0.3)
 }
 
 #home .bottom .footer .tos {
@@ -3298,16 +3415,136 @@ form.chat-form input {
     text-align: center
 }
 
+#home .bottom .footer .tos {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    flex-wrap: wrap
+}
+
 #home .bottom .footer .tos a {
+    font-size: 1.1em;
+    color: #fff;
+    text-decoration: none;
+    transition: opacity 0.2s ease, text-shadow 0.2s ease;
+    text-shadow: 0 0 8px rgba(255, 255, 255, 0.5)
+}
+
+#home .bottom .footer .tos a:hover {
+    opacity: 0.8;
+    text-shadow: 0 0 12px rgba(255, 255, 255, 0.8)
+}
+
+#home .bottom .footer .tos .x-link {
     margin-left: 4px;
-    margin-right: 4px
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    opacity: 0.9;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    color: #fff !important
+}
+
+#home .bottom .footer .tos .x-link:hover {
+    opacity: 1;
+    transform: scale(1.1)
+}
+
+#home .bottom .footer .tos .x-link svg {
+    width: 20px;
+    height: 20px;
+    fill: #fff
+}
+
+.terms-content {
+    width: 100%;
+    max-width: 1200px;
+    padding: 20px;
+    box-sizing: border-box
+}
+
+.terms-content h1 {
+    color: #fff;
+    margin-bottom: 20px;
+    text-shadow: 0 0 10px rgba(255, 255, 255, 0.3)
+}
+
+.terms-content h2 {
+    color: #fff;
+    margin-top: 30px;
+    margin-bottom: 15px;
+    font-size: 1.3em;
+    text-shadow: 0 0 8px rgba(255, 255, 255, 0.2)
+}
+
+.terms-content h3 {
+    color: #fff;
+    margin-top: 20px;
+    margin-bottom: 10px;
+    font-size: 1.1em;
+    text-shadow: 0 0 6px rgba(255, 255, 255, 0.2)
+}
+
+.terms-content ul {
+    margin: 15px 0;
+    padding-left: 30px
+}
+
+.terms-content li {
+    margin: 8px 0;
+    line-height: 1.6;
+    color: #fff
+}
+
+.terms-content p {
+    line-height: 1.6;
+    margin: 15px 0;
+    color: #fff
+}
+
+.terms-content strong {
+    color: #fff
+}
+
+.terms-content a {
+    color: #fff;
+    text-decoration: underline;
+    text-shadow: 0 0 8px rgba(255, 255, 255, 0.5);
+    transition: opacity 0.2s ease
+}
+
+.terms-content a:hover {
+    opacity: 0.8
+}
+
+.terms-content .back-link {
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    padding: 10px 20px;
+    background-color: var(--COLOR_PANEL_BG);
+    color: var(--COLOR_PANEL_TEXT);
+    text-decoration: none;
+    border-radius: var(--BORDER_RADIUS);
+    transition: background-color 0.2s ease, transform 0.2s ease;
+    z-index: 1000
+}
+
+.terms-content .back-link:hover {
+    background-color: var(--COLOR_PANEL_HI);
+    transform: translateY(-2px)
 }
 
 #home .bottom .footer .section-container {
     display: flex;
     justify-content: center;
     align-items: flex-start;
-    width: 100%
+    width: 100%;
+    flex-wrap: wrap;
+    gap: 10px
 }
 
 #home .bottom .footer .section-container .section {
@@ -3315,7 +3552,57 @@ form.chat-form input {
     font: inherit;
     color: var(--COLOR_PANEL_TEXT);
     width: 320px;
-    margin: 10px
+    margin: 10px;
+    background-color: var(--COLOR_PANEL_BG);
+    border-radius: var(--BORDER_RADIUS);
+    padding: 15px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    animation: fadeInUp 0.6s ease-out both
+}
+
+#home .bottom .footer .section-container .section:nth-child(1) {
+    animation-delay: 0.3s
+}
+
+#home .bottom .footer .section-container .section:nth-child(2) {
+    animation-delay: 0.4s
+}
+
+#home .bottom .footer .section-container .section:nth-child(3) {
+    animation-delay: 0.5s
+}
+
+#home .bottom .footer .section-container .section h2 {
+    margin: 0;
+    margin-bottom: 20px;
+    width: 100%;
+    text-align: center
+}
+
+#home .bottom .footer .section-container .section .icon {
+    position: absolute;
+    top: 18px;
+    left: 18px;
+    width: 32px;
+    height: 32px;
+    filter: drop-shadow(3px 3px 0 rgba(0, 0, 0, .25))
+}
+
+#home .bottom .footer .section-container .section .doodl-link {
+    color: var(--COLOR_PANEL_TEXT);
+    text-decoration: none;
+    transition: color 0.2s ease
+}
+
+#home .bottom .footer .section-container .section .doodl-link:hover {
+    color: var(--COLOR_PANEL_TEXT_FOCUS);
+    text-decoration: underline
+}
+
+#home .bottom .footer .section-container .section .doodl-link b {
+    font-weight: 700
 }
 
 #home .bottom .footer .section-container .section .icon {
@@ -3858,23 +4145,63 @@ form.chat-form input {
         height: 5vh
     }
 
-    #home .logo-big {
-        margin-top: 6vh;
-        margin-bottom: 4vh;
+    #home {
+        padding: 2vh
+    }
+
+    #home .home-header {
+        margin-bottom: 3vh;
+        padding-top: 1vh
+    }
+
+    #home .home-main {
+        gap: 3vh;
+        margin-top: 0
+    }
+
+    #home .bottom .footer .section-container {
+        flex-direction: column;
+        align-items: center
+    }
+
+    #home .bottom .footer .section-container .section {
         width: 95vw;
-        max-width: 65vh
+        max-width: 55vh;
+        padding: 1.25vh;
+        margin: 0;
+        margin-bottom: 1.25vh
+    }
+
+    #home .bottom .footer .section-container .section h2 {
+        margin-bottom: 2vh
+    }
+
+    #home .bottom .footer .section-container .section .icon {
+        width: 4vh;
+        height: 4vh;
+        top: 1vh;
+        left: 1vh
+    }
+
+    #home .game-panel {
+        max-width: 100%
+    }
+
+    #home .logo-big {
+        margin-top: 0;
+        margin-bottom: 2vh;
+        width: 100%
     }
 
     #home .logo-big img {
-        max-width: 85vw;
-        width: auto;
-        height: auto;
-        max-height: 20vh;
+        width: 100%;
+        max-width: 300px;
+        height: auto
     }
 
     #home .logo-big .avatar-container {
         width: 100%;
-        margin-top: 1.5vh;
+        margin-top: 0;
         height: auto
     }
 
@@ -3884,21 +4211,9 @@ form.chat-form input {
         aspect-ratio: 1
     }
 
-    #home .panels {
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-        width: 95vw;
-        max-width: 55vh
-    }
-
     #home .panel {
         width: 100%;
         padding: 1.75vh
-    }
-
-    #home .panel-left,#home .panel-right {
-        flex: 0 0 auto
     }
 
     #home .news .content {

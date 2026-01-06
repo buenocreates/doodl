@@ -680,7 +680,7 @@
         "View Rooms": "Räume ansehen",
         "How to play": "Wie gespielt wird",
         About: "Über",
-        News: "Neuigkeiten",
+        Updates: "Aktualisierungen",
         "When it's your turn, choose a word you want to draw!": "Wähle ein Wort, das du zeichnen willst, wenn du dran bist!",
         "Try to draw your choosen word! No spelling!": "Versuche nun dein Wort zu zeichnen. Kein Schreiben!",
         "Let other players try to guess your drawn word!": "Lass andere Mitspieler dein gezeichnetes Wort erraten!",
