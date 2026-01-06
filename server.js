@@ -949,39 +949,41 @@ io.on('connection', (socket) => {
       }
     });
     
-    // For public rooms in LOBBY, also send updated GAME_DATA to all existing players
-    // to ensure they see the waiting screen (not settings) when new players join
+    // For public rooms in LOBBY, send updated GAME_DATA to ALL players
+    // to ensure they ALL see the waiting screen (not settings) when new players join
     if (room.isPublic && room.state === GAME_STATE.LOBBY) {
-      // Send updated GAME_DATA to each existing player with their own 'me' value
+      // CRITICAL: Ensure room.isPublic is explicitly true
+      room.isPublic = true;
+      room.owner = null; // Ensure no owner
+      
+      // Send updated GAME_DATA to ALL players (including the new one) to ensure consistency
       room.players.forEach(p => {
-        if (p.id !== socket.id) { // Don't send to the new player (they already got it)
-          const updatedGameData = {
-            me: p.id, // Each player's own ID
-            type: 0, // Public room
-            id: room.id,
-            users: room.players.map(pl => ({
-              id: pl.id,
-              name: pl.name,
-              avatar: pl.avatar,
-              score: pl.score,
-              guessed: pl.guessed === true ? true : false,
-              flags: pl.flags
-            })),
-            round: room.currentRound,
-            owner: null, // Public rooms have no owner
-            settings: room.settings,
-            state: {
-              id: room.state,
-              time: 0,
-              data: {}
-            },
-            isPublic: true
-          };
-          io.to(p.id).emit('data', {
-            id: PACKET.GAME_DATA,
-            data: updatedGameData
-          });
-        }
+        const updatedGameData = {
+          me: p.id, // Each player's own ID
+          type: 0, // Public room - CRITICAL: must be 0
+          id: room.id,
+          users: room.players.map(pl => ({
+            id: pl.id,
+            name: pl.name,
+            avatar: pl.avatar,
+            score: pl.score,
+            guessed: pl.guessed === true ? true : false,
+            flags: pl.flags
+          })),
+          round: room.currentRound,
+          owner: null, // Public rooms have no owner - CRITICAL
+          settings: room.settings,
+          state: {
+            id: room.state,
+            time: 0,
+            data: {}
+          },
+          isPublic: true // CRITICAL: must be explicitly true
+        };
+        io.to(p.id).emit('data', {
+          id: PACKET.GAME_DATA,
+          data: updatedGameData
+        });
       });
     }
     
