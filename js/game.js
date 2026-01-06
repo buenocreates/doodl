@@ -3055,18 +3055,17 @@
     D(_n[1], "focus", function(e) {
         function t(e) {
             h.removeEventListener("scroll", t),
-            h.scroll(0, 0)
-            // Don't prevent default - allow native mobile keyboard
-            // e.preventDefault()
+            h.scroll(0, 0),
+            e.preventDefault()
         }
         uo(),
         On.classList.add("mobile-input-focus"),
-        // Only use custom keyboard if explicitly enabled, otherwise use native
-        ae && (h.addEventListener("scroll", t),
+        // Use custom keyboard if enabled, otherwise allow native keyboard
+        Ye && "1" == Ye.value && (h.addEventListener("scroll", t),
         setTimeout(function() {
             t(e)
-        }, 200))
-        // Removed e.preventDefault() to allow native mobile keyboard
+        }, 200),
+        e.preventDefault())
     }),
     D(_n[1], "blur", function(e) {
         uo(),
@@ -3113,6 +3112,8 @@
     l.chatBubbles = e("chatBubbles", 0),
     Ye && (Ye.value = e("keyboard", ae ? 1 : 0)),
     ze && (ze.value = e("keyboardlayout", "en")),
+    // Auto-enable mobile keyboard on mobile devices if not explicitly disabled
+    ae && !Ye && (c.documentElement.dataset.mobileKeyboard = "", _n[1] && _n[1].setAttribute("readonly", "")),
     He(),
     (function() {
         var chatBubblesEl = g[p].querySelector("#select-chat-bubbles");
