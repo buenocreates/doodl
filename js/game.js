@@ -1934,9 +1934,9 @@
             }, 600)
         }) : (cn.classList.add("show"),
         // For public rooms in LOBBY state, show waiting overlay instead of settings panel
-        // CRITICAL: Show waiting UNLESS explicitly private (In === false)
-        // If In is true/0/undefined and n.type is 0 or undefined, show waiting (default to public)
-        (n.id == J && !(In === false || (In === -1 && n.type === 1))) ? (
+        // CRITICAL: Default to WAITING screen. Only show settings if EXPLICITLY private (In === false)
+        // This ensures public rooms ALWAYS show waiting screen, never settings
+        (n.id == J && In !== false) ? (
             // Public room - show waiting overlay, check player count to determine message
             vn(A),
             (function() {
@@ -1995,23 +1995,13 @@
         e.id == J ? (la(),
         (function() {
             // Only show settings panel for private rooms, hide for public rooms
-            // In: true = public, false = private, -1 = not set yet
-            // e.type: 0 = public, 1 = private
-            var isPrivateRoom = false;
+            // CRITICAL: Default to HIDE settings (public). Only show if EXPLICITLY private (In === false)
+            // This ensures public rooms NEVER show settings panel
             if (In === false) {
-                // Explicitly private
-                isPrivateRoom = true;
-            } else if (In === true) {
-                // Explicitly public
-                isPrivateRoom = false;
-            } else if (In === -1 || In === void 0) {
-                // Not set yet, use e.type
-                isPrivateRoom = (e.type === 1);
-            }
-            if (isPrivateRoom) {
+                // Explicitly private - show settings panel
                 Pn.classList.add("room");
             } else {
-                // Public room - hide settings panel (waiting overlay already shown above)
+                // Public room or unknown - HIDE settings panel (waiting overlay already shown above)
                 Pn.classList.remove("room");
             }
         })()) : Pn.classList.remove("room"),

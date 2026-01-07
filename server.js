@@ -931,10 +931,21 @@ io.on('connection', (socket) => {
       gameData.code = room.code;
     }
     
+    // CRITICAL: Send GAME_DATA IMMEDIATELY - this must arrive before STATE packets
     socket.emit('data', {
       id: PACKET.GAME_DATA,
       data: gameData
     });
+    
+    // For public rooms, also send it after a tiny delay to ensure it's processed
+    if (isPublicRoom) {
+      setTimeout(() => {
+        socket.emit('data', {
+          id: PACKET.GAME_DATA,
+          data: gameData
+        });
+      }, 10);
+    }
     
     // Broadcast join to other players
     socket.to(roomId).emit('data', {
