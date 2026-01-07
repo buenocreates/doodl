@@ -1498,10 +1498,16 @@
             console.log("[WORD_CHOICE] Received WORD_CHOICE state, e.data:", e.data);
             // Set current drawer during word choice (for green chat messages)
             // If we're the drawer (e.data.words exists), M is us (x)
-            // If we're not the drawer (e.data.id exists), M is the drawer's ID
+            // If we're not the drawer (e.data.data.id exists), M is the drawer's ID
             if (e.data && e.data.words) {
                 M = x; // We're the drawer
-                console.log("[WORD_CHOICE] We are the drawer");
+                console.log("[WORD_CHOICE] We are the drawer, M set to:", M);
+            } else if (e.data && e.data.data && e.data.data.id) {
+                // Set M to the drawer's ID from server data
+                M = e.data.data.id;
+                console.log("[WORD_CHOICE] We are NOT the drawer, M set to drawer ID:", M);
+            }
+            if (e.data && e.data.words) {
                 // Enable chat input for drawer during word choice (they can type, messages appear in green)
                 _n[0].disabled = false,
                 _n[1].disabled = false,
@@ -1561,46 +1567,63 @@
                     }
                 }
             } else {
-                console.log("[WORD_CHOICE] We are NOT the drawer, showing 'choosing word' message");
+                console.log("[WORD_CHOICE] We are NOT the drawer, showing 'choosing word' message. Full e:", e);
                 vn(A);
-                // Get drawer player - use e.data.id which should be the drawer's socket ID
+                // Get drawer player - server sends drawer data in e.data.data (nested structure)
                 if (!e.data) {
                     console.error("[WORD_CHOICE] ERROR: e.data is undefined!");
                     return;
                 }
-                var drawerId = e.data.id;
+                // CRITICAL: Server sends drawer info in e.data.data, not e.data directly
+                var drawerData = e.data.data || e.data; // Try nested first, fallback to direct
+                var drawerId = drawerData.id;
                 var s = null;
-                console.log("[WORD_CHOICE] Drawer ID:", drawerId, "has name:", e.data.name, "has avatar:", e.data.avatar);
+                console.log("[WORD_CHOICE] Drawer ID:", drawerId, "has name:", drawerData.name, "has avatar:", drawerData.avatar, "drawerData:", drawerData);
+                // Ensure w array exists (should be set by GAME_DATA, but check anyway)
+                if (typeof w === 'undefined') {
+                    console.warn("[WORD_CHOICE] w array is undefined, initializing empty array");
+                    w = [];
+                }
                 // If server sent name and avatar directly, use those (most reliable)
-                if (e.data && e.data.name && e.data.avatar && Array.isArray(e.data.avatar) && e.data.avatar.length >= 3) {
+                if (drawerData && drawerData.name && drawerData.avatar && Array.isArray(drawerData.avatar) && drawerData.avatar.length >= 3) {
                     // Create a temporary player object with server data
                     s = {
                         id: drawerId,
-                        name: e.data.name,
-                        avatar: e.data.avatar
+                        name: drawerData.name,
+                        avatar: drawerData.avatar
                     };
                     console.log("[WORD_CHOICE] Using server-provided drawer:", s.name, s.avatar);
                 } else {
                     // Fallback: try to find player in w array
                     if (drawerId) {
                         s = W(drawerId);
+                        console.log("[WORD_CHOICE] Looked up drawer via W():", s ? s.name : "not found");
                     }
                     // If not found, search w array directly
-                    if (!s && drawerId) {
+                    if (!s && drawerId && w && Array.isArray(w)) {
                         for (var i = 0; i < w.length; i++) {
                             if (w[i] && w[i].id === drawerId) {
                                 s = w[i];
+                                console.log("[WORD_CHOICE] Found drawer in w array:", s.name);
                                 break;
                             }
                         }
                     }
                     // If still not found, use M (current drawer) which was set earlier
-                    if (!s && M) {
+                    if (!s && M && M !== -1) {
                         s = W(M);
+                        console.log("[WORD_CHOICE] Using M as fallback:", s ? s.name : "not found");
                     }
                 }
                 if (!s) {
-                    console.error("[WORD_CHOICE] ERROR: Could not find drawer! drawerId:", drawerId, "M:", M, "w.length:", w ? w.length : "w is undefined");
+                    console.error("[WORD_CHOICE] ERROR: Could not find drawer! drawerId:", drawerId, "M:", M, "w.length:", w ? w.length : "w is undefined", "drawerData:", drawerData);
+                    // Use defaults if we can't find the drawer
+                    s = {
+                        id: drawerId || "unknown",
+                        name: drawerData && drawerData.name ? drawerData.name : "Player",
+                        avatar: (drawerData && drawerData.avatar && Array.isArray(drawerData.avatar) && drawerData.avatar.length >= 3) ? drawerData.avatar : [0, 0, 0, 0]
+                    };
+                    console.log("[WORD_CHOICE] Using fallback drawer data:", s.name, s.avatar);
                 }
                 var drawerName = s ? s.name : E("User");
                 var drawerAvatar = s ? (s.avatar && Array.isArray(s.avatar) && s.avatar.length >= 3 ? s.avatar : [0, 0, 0, 0]) : [0, 0, 0, 0];
