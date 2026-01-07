@@ -1566,7 +1566,7 @@
                         un.appendChild(wordEl)
                     }
                 }
-            else {
+            } else {
                 vn(A);
                 // Reference code: W(e.data.id) where e.data is the nested data object
                 // Server sends: { id: WORD_CHOICE, data: { id: drawerId, ... } }
