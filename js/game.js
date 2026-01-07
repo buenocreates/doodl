@@ -1559,9 +1559,13 @@
             else {
                 vn(A);
                 // Get drawer player - use e.data.id which should be the drawer's socket ID
-                var drawerId = e.data && e.data.id ? e.data.id : undefined;
+                if (!e.data) {
+                    console.error("[WORD_CHOICE] ERROR: e.data is undefined!");
+                    return;
+                }
+                var drawerId = e.data.id;
                 var s = null;
-                console.log("[WORD_CHOICE] Drawer ID:", drawerId, "has name:", e.data ? e.data.name : "NO DATA", "has avatar:", e.data ? e.data.avatar : "NO DATA");
+                console.log("[WORD_CHOICE] Drawer ID:", drawerId, "has name:", e.data.name, "has avatar:", e.data.avatar);
                 // If server sent name and avatar directly, use those (most reliable)
                 if (e.data && e.data.name && e.data.avatar && Array.isArray(e.data.avatar) && e.data.avatar.length >= 3) {
                     // Create a temporary player object with server data
@@ -2106,7 +2110,8 @@
                 }
             }
         })()) : Pn.classList.remove("room"),
-        e.id == F && (ia(e.data),
+        e.id == F && (console.log("[ROUND_START] Received round number:", e.data, "will display as Round", e.data + 1),
+        ia(e.data),
         0 == e.data) && la(),
         e.id == Z) {
             x != M && ga(e.data.word);

@@ -2048,11 +2048,19 @@ io.on('connection', (socket) => {
     const drawerPlayer = room.players.find(p => p.id === room.currentDrawer);
     if (!drawerPlayer) {
       console.error(`❌ ERROR: Drawer ${room.currentDrawer} not found in room ${room.id}! Players:`, room.players.map(p => p.id));
-    } else {
-      console.log(`👤 Sending drawer info: ${drawerPlayer.name}, avatar:`, drawerPlayer.avatar);
+      return; // Don't proceed if drawer not found
     }
+    
+    // Ensure drawer has valid name and avatar
+    if (!drawerPlayer.name || !drawerPlayer.avatar || !Array.isArray(drawerPlayer.avatar) || drawerPlayer.avatar.length < 3) {
+      console.error(`❌ ERROR: Drawer ${room.currentDrawer} has invalid data! name:`, drawerPlayer.name, "avatar:", drawerPlayer.avatar);
+    } else {
+      console.log(`👤 Sending drawer info to non-drawers: ${drawerPlayer.name}, avatar:`, drawerPlayer.avatar);
+    }
+    
     room.players.forEach(player => {
       if (player.id !== room.currentDrawer) {
+        // Always send drawer data, even if invalid (client will handle fallback)
         io.to(player.id).emit('data', {
           id: PACKET.STATE,
           data: {
@@ -2060,8 +2068,8 @@ io.on('connection', (socket) => {
             time: room.timer, // 15 seconds timer
             data: {
               id: room.currentDrawer,  // Drawer's ID (client shows "$ is choosing a word!")
-              name: drawerPlayer ? drawerPlayer.name : undefined,  // Drawer's name
-              avatar: drawerPlayer ? drawerPlayer.avatar : undefined  // Drawer's avatar
+              name: drawerPlayer.name || "Player",  // Drawer's name (always send something)
+              avatar: (drawerPlayer.avatar && Array.isArray(drawerPlayer.avatar) && drawerPlayer.avatar.length >= 3) ? drawerPlayer.avatar : [0, 0, 0, 0]  // Drawer's avatar (always send valid array)
             }
           }
         });
