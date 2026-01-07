@@ -2119,7 +2119,8 @@
         Pn.classList.add("toolbar-hidden"),
         yt(),
         da(!1),
-        e.id == J ? (function() {
+        e.id == J ? (
+        (function() {
             // CRITICAL: ALWAYS hide settings panel for public rooms
             // Only show settings panel if EXPLICITLY private (In === false AND room doesn't start with PUBLIC-)
             var roomIdToCheck = Tn || "";
