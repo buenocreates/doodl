@@ -1934,7 +1934,9 @@
             }, 600)
         }) : (cn.classList.add("show"),
         // For public rooms in LOBBY state, show waiting overlay instead of settings panel
-        (n.id == J && ((In !== void 0 && In !== null && In !== false) || (In === void 0 && n.type === 0))) ? (
+        // CRITICAL: Show waiting UNLESS explicitly private (In === false)
+        // If In is true/0/undefined and n.type is 0 or undefined, show waiting (default to public)
+        (n.id == J && !(In === false || (In === -1 && n.type === 1))) ? (
             // Public room - show waiting overlay, check player count to determine message
             vn(A),
             (function() {
