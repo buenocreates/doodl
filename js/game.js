@@ -1567,33 +1567,43 @@
                     }
                 }
             } else {
-                // For non-drawers: Just show "User is choosing a word" overlay
-                // ROUND_START already showed "Round X" before WORD_CHOICE is sent, so we don't show it again
-                // Get drawer info from server data
-                var drawerId = (e.data && e.data.data && e.data.data.id) ? e.data.data.id : (e.data && e.data.id !== V ? e.data.id : null);
+                // For non-drawers: Show "User is choosing a word" overlay
+                // Server sends: { id: STATE, data: { id: WORD_CHOICE, data: { id: drawerId, name: ..., avatar: ... } } }
+                // So in bn(), e.data is { id: WORD_CHOICE, data: { id: drawerId, name: ..., avatar: ... } }
+                console.log("[WORD_CHOICE] Full e.data structure:", JSON.stringify(e.data));
+                
+                var drawerId = null;
                 var drawerName = null;
                 var drawerAvatar = null;
                 
-                // Try to get drawer from player list first
+                // Extract drawer info from server data structure
+                if (e.data && e.data.data) {
+                    // Server sends nested: e.data.data.id, e.data.data.name, e.data.data.avatar
+                    drawerId = e.data.data.id;
+                    drawerName = e.data.data.name;
+                    drawerAvatar = e.data.data.avatar;
+                    console.log("[WORD_CHOICE] Extracted from e.data.data - id:", drawerId, "name:", drawerName, "avatar:", drawerAvatar);
+                }
+                
+                // ALWAYS try player list first - it's the most reliable source
                 var s = drawerId ? W(drawerId) : null;
                 if (s) {
+                    // Use player list data (always correct and up-to-date)
                     drawerName = s.name;
                     drawerAvatar = s.avatar;
-                } else if (e.data && e.data.data) {
-                    // Use server-provided name/avatar (always available)
-                    drawerName = e.data.data.name || E("User");
-                    drawerAvatar = (e.data.data.avatar && Array.isArray(e.data.data.avatar) && e.data.data.avatar.length >= 3) ? e.data.data.avatar : [0, 0, 0, 0];
+                    console.log("[WORD_CHOICE] Using player list - drawer:", drawerName, "id:", drawerId, "avatar:", drawerAvatar);
+                } else if (drawerName && drawerAvatar && Array.isArray(drawerAvatar) && drawerAvatar.length >= 3) {
+                    // Use server-provided data if player not found in list
                     console.log("[WORD_CHOICE] Using server-provided drawer info - name:", drawerName, "avatar:", drawerAvatar);
                 } else {
+                    // Fallback - this should not happen
+                    console.error("[WORD_CHOICE] ERROR: Could not find drawer! drawerId:", drawerId, "e.data:", e.data);
                     drawerName = E("User");
                     drawerAvatar = [0, 0, 0, 0];
                 }
                 
-                // Show "User is choosing a word" overlay directly
-                // The server already delayed WORD_CHOICE by 2.5 seconds after ROUND_START,
-                // so "Round X" was already shown and the overlay should be transitioning
+                // Show "User is choosing a word" overlay
                 vn(A);
-                // Clear any existing content first (important to remove "Round X" text)
                 ce(A);
                 var L = drawerName;
                 var avatarEl = de(drawerAvatar, drawerId == En);
@@ -2125,6 +2135,8 @@
         })()) : Pn.classList.remove("room"),
         e.id == F && (console.log("[ROUND_START] Received round number:", e.data, "will display as Round", e.data + 1),
         ia(e.data),
+        // Ensure round text is visible
+        Un && (Un.style.display = "", Un.style.visibility = "visible", Un.style.opacity = "1", Un.parentElement && (Un.parentElement.style.display = "", Un.parentElement.style.visibility = "visible")),
         0 == e.data) && la(),
         e.id == Z) {
             x != M && ga(e.data.word);
