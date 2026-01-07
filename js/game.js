@@ -2119,7 +2119,7 @@
         Pn.classList.add("toolbar-hidden"),
         yt(),
         da(!1),
-        e.id == J ? (function() {
+        e.id == J ? ((function() {
             // CRITICAL: ALWAYS hide settings panel for public rooms
             // Only show settings panel if EXPLICITLY private (In === false AND room doesn't start with PUBLIC-)
             var roomIdToCheck = Tn || "";
@@ -2150,7 +2150,8 @@
                     }, 10);
                 }
             }
-        })() : Pn.classList.remove("room"), e.id == F && (ia(e.data), 0 == e.data) && la(), e.id == Z) {
+        })()) : Pn.classList.remove("room"), e.id == F && (ia(e.data), 0 == e.data) && la(), e.id == Z)
+        ) {
             x != M && ga(e.data.word);
             for (var o = 0; o < e.data.scores.length; o += 3) {
                 var r = e.data.scores[o + 0]
