@@ -1567,25 +1567,57 @@
                     }
                 }
             } else {
-                // Show "User is choosing a word" immediately when WORD_CHOICE is received
-                // The server already delays sending WORD_CHOICE until after "Round X" is shown
-                vn(A);
+                // For non-drawers: First show "Round X" text (same duration as ROUND_START)
+                // Then show "User is choosing a word" overlay after the delay
+                // Get drawer info from server data
                 var drawerId = (e.data && e.data.data && e.data.data.id) ? e.data.data.id : (e.data && e.data.id !== V ? e.data.id : null);
+                var drawerName = null;
+                var drawerAvatar = null;
+                
+                // Try to get drawer from player list first
                 var s = drawerId ? W(drawerId) : null;
-                // If not found, try to use server-provided name/avatar
-                if (!s && e.data && e.data.data && e.data.data.name && e.data.data.avatar) {
-                    s = {
-                        id: drawerId,
-                        name: e.data.data.name,
-                        avatar: e.data.data.avatar
-                    };
+                if (s) {
+                    drawerName = s.name;
+                    drawerAvatar = s.avatar;
+                } else if (e.data && e.data.data) {
+                    // Use server-provided name/avatar (always available)
+                    drawerName = e.data.data.name || E("User");
+                    drawerAvatar = (e.data.data.avatar && Array.isArray(e.data.data.avatar) && e.data.data.avatar.length >= 3) ? e.data.data.avatar : [0, 0, 0, 0];
+                    console.log("[WORD_CHOICE] Using server-provided drawer info - name:", drawerName, "avatar:", drawerAvatar);
+                } else {
+                    drawerName = E("User");
+                    drawerAvatar = [0, 0, 0, 0];
                 }
-                var L = s ? s.name : E("User"),
-                L = (A.textContent = "", A.appendChild(se("span", void 0, E("$ is choosing a word!", L))), de(s ? s.avatar : [0, 0, 0, 0], drawerId == En));
-                s && pe(L, Ya(s)),
-                L.style.width = "2em",
-                L.style.height = "2em",
-                A.appendChild(L)
+                
+                // First show "Round X" in overlay (same as ROUND_START does)
+                // This ensures non-drawers see the round text first
+                vn(A);
+                A.textContent = E("Round $", Rn + 1);
+                
+                // Show the overlay with round text immediately
+                if (!cn.classList.contains("show")) {
+                    cn.classList.add("show");
+                }
+                yn({
+                    top: 0,
+                    opacity: 1
+                }, 600);
+                
+                // After same duration as ROUND_START (2.5 seconds), show "User is choosing a word"
+                setTimeout(function() {
+                    vn(A);
+                    var L = drawerName;
+                    var avatarEl = de(drawerAvatar, drawerId == En);
+                    // Apply player filters if we have the player object
+                    if (s) {
+                        pe(avatarEl, Ya(s));
+                    }
+                    A.textContent = "";
+                    A.appendChild(se("span", void 0, E("$ is choosing a word!", L)));
+                    avatarEl.style.width = "2em";
+                    avatarEl.style.height = "2em";
+                    A.appendChild(avatarEl);
+                }, 2500); // Same duration as server delay
             }
         }
     }
@@ -1927,6 +1959,15 @@
         if (Un) {
             Un.textContent = E("Round $ of $", [e, t]);
             console.log("[ROUND] Set text to:", Un.textContent);
+            // Ensure the element is visible
+            if (Un.parentElement) {
+                Un.parentElement.style.display = "";
+                Un.parentElement.style.visibility = "visible";
+                Un.parentElement.style.opacity = "1";
+            }
+            Un.style.display = "";
+            Un.style.visibility = "visible";
+            Un.style.opacity = "1";
         } else {
             console.error("[ROUND] ERROR: Un element not found!");
         }
