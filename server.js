@@ -2066,10 +2066,13 @@ io.on('connection', (socket) => {
           data: {
             id: GAME_STATE.WORD_CHOICE, // V = 3
             time: room.timer, // 15 seconds timer
+            id: room.currentDrawer,  // Drawer's ID at top level (for reference code compatibility)
+            name: drawerPlayer.name || "Player",  // Drawer's name
+            avatar: (drawerPlayer.avatar && Array.isArray(drawerPlayer.avatar) && drawerPlayer.avatar.length >= 3) ? drawerPlayer.avatar : [0, 0, 0, 0],  // Drawer's avatar
             data: {
-              id: room.currentDrawer,  // Drawer's ID (client shows "$ is choosing a word!")
-              name: drawerPlayer.name || "Player",  // Drawer's name (always send something)
-              avatar: (drawerPlayer.avatar && Array.isArray(drawerPlayer.avatar) && drawerPlayer.avatar.length >= 3) ? drawerPlayer.avatar : [0, 0, 0, 0]  // Drawer's avatar (always send valid array)
+              id: room.currentDrawer,  // Also in nested data for our code
+              name: drawerPlayer.name || "Player",
+              avatar: (drawerPlayer.avatar && Array.isArray(drawerPlayer.avatar) && drawerPlayer.avatar.length >= 3) ? drawerPlayer.avatar : [0, 0, 0, 0]
             }
           }
         };

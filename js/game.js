@@ -1566,51 +1566,23 @@
                         un.appendChild(wordEl)
                     }
                 }
-            } else {
-                console.log("[WORD_CHOICE] We are NOT the drawer, showing 'choosing word' message. e.data:", e.data);
+            else {
                 vn(A);
-                // Match reference code: use e.data.id directly (server sends drawer data in e.data.data, but we extract it)
-                // The server sends: { id: STATE, data: { id: WORD_CHOICE, data: { id: drawerId, name, avatar } } }
-                // So e.data is { id: WORD_CHOICE, data: { id: drawerId, name, avatar } }
-                // We need e.data.data for the drawer info
-                var drawerInfo = e.data.data || {}; // Get drawer info from nested data
-                var drawerId = drawerInfo.id || e.data.id; // Try nested first, fallback to direct
-                console.log("[WORD_CHOICE] drawerInfo:", drawerInfo, "drawerId:", drawerId, "e.data:", e.data);
-                // Ensure w array exists
-                if (typeof w === 'undefined') {
-                    console.warn("[WORD_CHOICE] w array is undefined, initializing empty array");
-                    w = [];
-                }
-                // Try to find drawer in w array first (most reliable)
+                // Match reference code: W(e.data.id) - but our server sends drawer ID in e.data.data.id
+                // Extract drawer ID from nested data structure
+                var drawerId = (e.data.data && e.data.data.id) ? e.data.data.id : (e.data.id !== V ? e.data.id : null);
+                // Find player in w array (reference code pattern)
                 var s = drawerId ? W(drawerId) : null;
-                // If not found and server sent name/avatar, use those
-                if (!s && drawerInfo.name && drawerInfo.avatar && Array.isArray(drawerInfo.avatar) && drawerInfo.avatar.length >= 3) {
+                // If not found but server sent name/avatar, create temp player object
+                if (!s && e.data.data && e.data.data.name && e.data.data.avatar && Array.isArray(e.data.data.avatar) && e.data.data.avatar.length >= 3) {
                     s = {
-                        id: drawerId || "unknown",
-                        name: drawerInfo.name,
-                        avatar: drawerInfo.avatar
+                        id: drawerId,
+                        name: e.data.data.name,
+                        avatar: e.data.data.avatar
                     };
-                    console.log("[WORD_CHOICE] Using server-provided drawer data:", s.name, s.avatar);
                 }
-                // If still not found, use M (current drawer) as fallback
-                if (!s && M && M !== -1) {
-                    s = W(M);
-                    console.log("[WORD_CHOICE] Using M as fallback:", s ? s.name : "not found");
-                }
-                // Final fallback: use defaults
-                if (!s) {
-                    s = {
-                        id: drawerId || "unknown",
-                        name: drawerInfo.name || "Player",
-                        avatar: (drawerInfo.avatar && Array.isArray(drawerInfo.avatar) && drawerInfo.avatar.length >= 3) ? drawerInfo.avatar : [0, 0, 0, 0]
-                    };
-                    console.log("[WORD_CHOICE] Using final fallback:", s.name, s.avatar);
-                }
-                var drawerName = s.name || E("User");
-                var drawerAvatar = (s.avatar && Array.isArray(s.avatar) && s.avatar.length >= 3) ? s.avatar : [0, 0, 0, 0];
-                var L = (A.textContent = "",
-                A.appendChild(se("span", void 0, E("$ is choosing a word!", drawerName))),
-                de(drawerAvatar, drawerId == En));
+                var L = (s = s || null) ? s.name : E("User"),
+                L = (A.textContent = "", A.appendChild(se("span", void 0, E("$ is choosing a word!", L))), de(s ? s.avatar : [0, 0, 0, 0], drawerId == En));
                 s && pe(L, Ya(s)),
                 L.style.width = "2em",
                 L.style.height = "2em",
@@ -1952,36 +1924,8 @@
     function ia(e) {
         var e = (Rn = e) + 1
           , t = An[te.ROUNDS];
-        console.log("[ROUND] Setting round display: Rn=", Rn, "e=", e, "t=", t, "Un element:", Un);
         if (Un) {
             Un.textContent = E("Round $ of $", [e, t]);
-            console.log("[ROUND] Round text set to:", Un.textContent);
-            // Make sure it's visible - force styles on element and all parents
-            Un.style.display = "";
-            Un.style.visibility = "visible";
-            Un.style.opacity = "1";
-            Un.style.color = "";
-            Un.style.position = "";
-            Un.style.left = "";
-            Un.style.top = "";
-            Un.style.fontSize = "";
-            // Force parent visibility
-            var parent = Un.parentElement;
-            while (parent) {
-                parent.style.display = "";
-                parent.style.visibility = "visible";
-                parent.style.opacity = "1";
-                parent = parent.parentElement;
-            }
-            // Also ensure game-bar is visible
-            var gameBar = c.querySelector("#game-bar");
-            if (gameBar) {
-                gameBar.style.display = "";
-                gameBar.style.visibility = "visible";
-                gameBar.style.opacity = "1";
-            }
-        } else {
-            console.error("[ROUND] ERROR: Un element not found!");
         }
     }
     function la() {
