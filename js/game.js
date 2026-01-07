@@ -1566,7 +1566,7 @@
                         un.appendChild(wordEl)
                     }
                 }
-            else {
+            } else {
                 // Show "User is choosing a word" immediately when WORD_CHOICE is received
                 // The server already delays sending WORD_CHOICE until after "Round X" is shown
                 vn(A);
