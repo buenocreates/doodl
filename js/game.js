@@ -1504,13 +1504,13 @@
             console.log("[WORD_CHOICE] Received WORD_CHOICE state, e.data:", e.data);
             // Set current drawer during word choice (for green chat messages)
             // If we're the drawer (e.data.words exists), M is us (x)
-            // If we're not the drawer (e.data.data.id exists), M is the drawer's ID
+            // If we're not the drawer (e.data.id exists), M is the drawer's ID
             if (e.data && e.data.words) {
                 M = x; // We're the drawer
                 console.log("[WORD_CHOICE] We are the drawer, M set to:", M);
-            } else if (e.data && e.data.data && e.data.data.id) {
+            } else if (e.data && e.data.id) {
                 // Set M to the drawer's ID from server data
-                M = e.data.data.id;
+                M = e.data.id;
                 console.log("[WORD_CHOICE] We are NOT the drawer, M set to drawer ID:", M);
             }
             if (e.data && e.data.words) {
@@ -1523,9 +1523,7 @@
                 _n[1].removeAttribute("readonly"),
                 _n[0].removeAttribute("disabled"),
                 _n[1].removeAttribute("disabled");
-            } else if (e.data && e.data.id !== undefined) {
-                M = e.data.id; // Someone else is the drawer
-                console.log("[WORD_CHOICE] Drawer is:", e.data.id, "name:", e.data.name, "avatar:", e.data.avatar);
+            } else if (e.data && e.data.id) {
                 // Enable chat input for guessing players
                 _n[0].disabled = !1,
                 _n[1].disabled = !1,
@@ -1574,6 +1572,7 @@
                 }
             } else {
                 // For non-drawers: Show "User is choosing a word" overlay
+                // ROUND_START already showed "Round 1" in overlay, so we just show the drawer choosing
                 // In bn(), e is the state object: { id: WORD_CHOICE, time: ..., data: { id: drawerId, name: ..., avatar: ... } }
                 // So e.data is { id: drawerId, name: ..., avatar: ... }
                 var drawerId = e.data && e.data.id ? e.data.id : null;
@@ -1589,24 +1588,44 @@
                 } else if (drawerName && drawerAvatar) {
                     // Use server-provided data if player not found in list
                 } else {
-                    // Fallback
-                    drawerName = E("User");
-                    drawerAvatar = [0, 0, 0, 0];
+                    // Fallback - should not happen, but if it does, don't show anything
+                    // The server always sends drawer info, so this is an error case
+                    console.error("[WORD_CHOICE] ERROR: No drawer info available!");
+                    return; // Don't show overlay if we don't have drawer info
                 }
                 
-                // Show "User is choosing a word" overlay
-                vn(A);
-                ce(A);
-                var L = drawerName;
-                var avatarEl = de(drawerAvatar, drawerId == En);
-                // Apply player filters if we have the player object
-                if (s) {
-                    pe(avatarEl, Ya(s));
+                // Check if overlay is currently showing "Round X" - if so, wait a bit before showing "User is choosing a word"
+                // This ensures "Round 1" is visible first
+                var currentlyShowingRound = A && A.textContent && A.textContent.indexOf("Round") !== -1;
+                if (currentlyShowingRound) {
+                    // Overlay is showing "Round X", wait a bit before showing "User is choosing a word"
+                    setTimeout(function() {
+                        vn(A);
+                        ce(A);
+                        var L = drawerName;
+                        var avatarEl = de(drawerAvatar, drawerId == En);
+                        if (s) {
+                            pe(avatarEl, Ya(s));
+                        }
+                        A.appendChild(se("span", void 0, E("$ is choosing a word!", L)));
+                        avatarEl.style.width = "2em";
+                        avatarEl.style.height = "2em";
+                        A.appendChild(avatarEl);
+                    }, 500); // Small delay to ensure "Round 1" was visible
+                } else {
+                    // Show "User is choosing a word" overlay immediately
+                    vn(A);
+                    ce(A);
+                    var L = drawerName;
+                    var avatarEl = de(drawerAvatar, drawerId == En);
+                    if (s) {
+                        pe(avatarEl, Ya(s));
+                    }
+                    A.appendChild(se("span", void 0, E("$ is choosing a word!", L)));
+                    avatarEl.style.width = "2em";
+                    avatarEl.style.height = "2em";
+                    A.appendChild(avatarEl);
                 }
-                A.appendChild(se("span", void 0, E("$ is choosing a word!", L)));
-                avatarEl.style.width = "2em";
-                avatarEl.style.height = "2em";
-                A.appendChild(avatarEl);
             }
         }
     }
@@ -2000,6 +2019,14 @@
                 opacity: 1
             }, 600)
         }) : (cn.classList.add("show"),
+        // For ROUND_START (F), always show "Round X" in overlay first
+        n.id == F ? (
+            bn(n),
+            yn({
+                top: 0,
+                opacity: 1
+            }, 600)
+        ) : (
         // For public rooms in LOBBY state, show waiting overlay instead of settings panel
         // CRITICAL: ALWAYS show waiting screen for LOBBY state UNLESS explicitly private
         // Default to public (waiting screen) if In is not explicitly false
