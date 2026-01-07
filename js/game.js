@@ -1560,15 +1560,32 @@
                 vn(A);
                 // Get drawer player - use e.data.id which should be the drawer's socket ID
                 var drawerId = e.data.id;
-                var s = W(drawerId);
-                // If player not found, try to find by currentDrawer or En
-                if (!s && drawerId) {
-                    // Try to find player in w array
-                    for (var i = 0; i < w.length; i++) {
-                        if (w[i].id === drawerId) {
-                            s = w[i];
-                            break;
+                var s = null;
+                // If server sent name and avatar directly, use those (most reliable)
+                if (e.data.name && e.data.avatar) {
+                    // Create a temporary player object with server data
+                    s = {
+                        id: drawerId,
+                        name: e.data.name,
+                        avatar: e.data.avatar
+                    };
+                } else {
+                    // Fallback: try to find player in w array
+                    if (drawerId) {
+                        s = W(drawerId);
+                    }
+                    // If not found, search w array directly
+                    if (!s && drawerId) {
+                        for (var i = 0; i < w.length; i++) {
+                            if (w[i] && w[i].id === drawerId) {
+                                s = w[i];
+                                break;
+                            }
                         }
+                    }
+                    // If still not found, use M (current drawer) which was set earlier
+                    if (!s && M) {
+                        s = W(M);
                     }
                 }
                 var drawerName = s ? s.name : E("User");

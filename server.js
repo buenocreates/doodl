@@ -1940,7 +1940,7 @@ io.on('connection', (socket) => {
     room.timer = 15; // 15 second timer for word choice
     
     // Step 1: Send "Round X" text to overlay (no countdown in overlay)
-    // Send round number (currentRound is already 1-indexed after increment, but client expects 0-indexed)
+    // currentRound is 1-indexed (1, 2, 3...), client expects 0-indexed (0, 1, 2...) and adds 1 to display
     const roundNumber = room.currentRound - 1; // Round number (0-indexed, client adds 1 to display)
     
     // Also send updated GAME_DATA with correct round number to ensure round display is updated
@@ -1957,7 +1957,7 @@ io.on('connection', (socket) => {
           guessed: p.guessed === true ? true : false,
           flags: p.flags
         })),
-        round: room.currentRound - 1, // Send 0-indexed round (client will add 1)
+        round: roundNumber, // Send 0-indexed round (0 for round 1, 1 for round 2, etc.)
         owner: room.isPublic ? null : room.owner,
         settings: room.settings,
         state: {
@@ -1981,7 +1981,7 @@ io.on('connection', (socket) => {
       data: {
         id: GAME_STATE.ROUND_START, // F = 2
         time: 3, // Start with 3 for countdown display
-        data: roundNumber  // Round number (client will show "Round X")
+        data: roundNumber  // Round number (0-indexed, client will show "Round X" by adding 1)
       }
     });
     
@@ -2039,6 +2039,8 @@ io.on('connection', (socket) => {
     });
     
     // Send "choosing word" message to OTHER players (V = 3, WORD_CHOICE without words, with timer)
+    // Also send drawer's name and avatar to ensure correct display
+    const drawerPlayer = room.players.find(p => p.id === room.currentDrawer);
     room.players.forEach(player => {
       if (player.id !== room.currentDrawer) {
         io.to(player.id).emit('data', {
@@ -2047,7 +2049,9 @@ io.on('connection', (socket) => {
             id: GAME_STATE.WORD_CHOICE, // V = 3
             time: room.timer, // 15 seconds timer
             data: {
-              id: room.currentDrawer  // Drawer's ID (client shows "$ is choosing a word!")
+              id: room.currentDrawer,  // Drawer's ID (client shows "$ is choosing a word!")
+              name: drawerPlayer ? drawerPlayer.name : undefined,  // Drawer's name
+              avatar: drawerPlayer ? drawerPlayer.avatar : undefined  // Drawer's avatar
             }
           }
         });
