@@ -932,6 +932,12 @@ io.on('connection', (socket) => {
     }
     
     // CRITICAL: Send GAME_DATA IMMEDIATELY - this must arrive before STATE packets
+    console.log(`📤 Sending GAME_DATA to ${socket.id} for room ${roomId}:`, {
+      type: gameData.type,
+      isPublic: gameData.isPublic,
+      owner: gameData.owner,
+      roomState: gameData.state.id
+    });
     socket.emit('data', {
       id: PACKET.GAME_DATA,
       data: gameData
@@ -940,6 +946,11 @@ io.on('connection', (socket) => {
     // For public rooms, also send it after a tiny delay to ensure it's processed
     if (isPublicRoom) {
       setTimeout(() => {
+        console.log(`📤 Sending duplicate GAME_DATA to ${socket.id} (public room):`, {
+          type: gameData.type,
+          isPublic: gameData.isPublic,
+          owner: gameData.owner
+        });
         socket.emit('data', {
           id: PACKET.GAME_DATA,
           data: gameData
