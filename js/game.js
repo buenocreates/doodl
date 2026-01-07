@@ -1931,7 +1931,12 @@
             top: -100,
             opacity: 1
         }, 600, function() {
-            bn(n),
+            // Check if public room before calling bn(n)
+            var roomIdToCheck = Tn || "";
+            var isPublicRoom = (In !== false) || (roomIdToCheck && typeof roomIdToCheck === "string" && roomIdToCheck.indexOf("PUBLIC-") === 0);
+            if (!isPublicRoom || n.id != J) {
+                bn(n);
+            }
             yn({
                 top: 0,
                 opacity: 1
@@ -1996,7 +2001,19 @@
             }, 600)
         ) : (
             // Private room or other state - use normal flow
-            bn(n),
+            // Only call bn(n) if NOT a public room in LOBBY state
+            (function() {
+                var roomIdToCheck = Tn || "";
+                var isPublicRoom = (In !== false) || (roomIdToCheck && typeof roomIdToCheck === "string" && roomIdToCheck.indexOf("PUBLIC-") === 0);
+                if (!(n.id == J && isPublicRoom)) {
+                    bn(n);
+                } else {
+                    // Public room in LOBBY - ensure settings panel is hidden
+                    if (pn) pn.classList.remove("show");
+                    Pn.classList.remove("room");
+                    vn(A); // Show waiting overlay instead
+                }
+            })(),
             yn({
                 top: 0,
                 opacity: 1
