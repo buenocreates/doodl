@@ -1390,6 +1390,11 @@
         case F:
             vn(A),
             A.textContent = E("Round $", e.data + 1);
+            // Mark that we've shown "Round X" so WORD_CHOICE doesn't show it again
+            h._roundStartShown = true;
+            setTimeout(function() {
+                h._roundStartShown = false;
+            }, 3500); // Clear flag after overlay would have finished (3s countdown + 0.5s buffer)
             break;
         case G:
             vn(A),
@@ -1567,8 +1572,8 @@
                     }
                 }
             } else {
-                // For non-drawers: First show "Round X" text (same duration as ROUND_START)
-                // Then show "User is choosing a word" overlay after the delay
+                // For non-drawers: Show "User is choosing a word" overlay
+                // If ROUND_START already showed "Round X", we skip showing it again to avoid duplication
                 // Get drawer info from server data
                 var drawerId = (e.data && e.data.data && e.data.data.id) ? e.data.data.id : (e.data && e.data.id !== V ? e.data.id : null);
                 var drawerName = null;
@@ -1589,22 +1594,10 @@
                     drawerAvatar = [0, 0, 0, 0];
                 }
                 
-                // First show "Round X" in overlay (same as ROUND_START does)
-                // This ensures non-drawers see the round text first
-                vn(A);
-                A.textContent = E("Round $", Rn + 1);
-                
-                // Show the overlay with round text immediately
-                if (!cn.classList.contains("show")) {
-                    cn.classList.add("show");
-                }
-                yn({
-                    top: 0,
-                    opacity: 1
-                }, 600);
-                
-                // After same duration as ROUND_START (2.5 seconds), show "User is choosing a word"
-                setTimeout(function() {
+                // Check if ROUND_START already showed "Round X" - if so, just show "User is choosing a word"
+                // If not (edge case), show "Round X" first, then "User is choosing a word"
+                if (h._roundStartShown) {
+                    // ROUND_START already showed "Round X", so just show "User is choosing a word"
                     vn(A);
                     var L = drawerName;
                     var avatarEl = de(drawerAvatar, drawerId == En);
@@ -1617,7 +1610,44 @@
                     avatarEl.style.width = "2em";
                     avatarEl.style.height = "2em";
                     A.appendChild(avatarEl);
-                }, 2500); // Same duration as server delay
+                    
+                    // Ensure overlay is visible
+                    if (!cn.classList.contains("show")) {
+                        cn.classList.add("show");
+                    }
+                    yn({
+                        top: 0,
+                        opacity: 1
+                    }, 600);
+                } else {
+                    // Edge case: ROUND_START didn't show "Round X" (shouldn't happen, but handle it)
+                    // Show "Round X" first, then "User is choosing a word" after delay
+                    vn(A);
+                    A.textContent = E("Round $", Rn + 1);
+                    
+                    if (!cn.classList.contains("show")) {
+                        cn.classList.add("show");
+                    }
+                    yn({
+                        top: 0,
+                        opacity: 1
+                    }, 600);
+                    
+                    // After delay, show "User is choosing a word"
+                    setTimeout(function() {
+                        vn(A);
+                        var L = drawerName;
+                        var avatarEl = de(drawerAvatar, drawerId == En);
+                        if (s) {
+                            pe(avatarEl, Ya(s));
+                        }
+                        A.textContent = "";
+                        A.appendChild(se("span", void 0, E("$ is choosing a word!", L)));
+                        avatarEl.style.width = "2em";
+                        avatarEl.style.height = "2em";
+                        A.appendChild(avatarEl);
+                    }, 2500);
+                }
             }
         }
     }
