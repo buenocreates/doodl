@@ -1567,66 +1567,47 @@
                     }
                 }
             } else {
-                console.log("[WORD_CHOICE] We are NOT the drawer, showing 'choosing word' message. Full e:", e);
+                console.log("[WORD_CHOICE] We are NOT the drawer, showing 'choosing word' message. e.data:", e.data);
                 vn(A);
-                // Get drawer player - server sends drawer data in e.data.data (nested structure)
-                if (!e.data) {
-                    console.error("[WORD_CHOICE] ERROR: e.data is undefined!");
-                    return;
-                }
-                // CRITICAL: Server sends drawer info in e.data.data, not e.data directly
-                var drawerData = e.data.data || e.data; // Try nested first, fallback to direct
-                var drawerId = drawerData.id;
-                var s = null;
-                console.log("[WORD_CHOICE] Drawer ID:", drawerId, "has name:", drawerData.name, "has avatar:", drawerData.avatar, "drawerData:", drawerData);
-                // Ensure w array exists (should be set by GAME_DATA, but check anyway)
+                // Match reference code: use e.data.id directly (server sends drawer data in e.data.data, but we extract it)
+                // The server sends: { id: STATE, data: { id: WORD_CHOICE, data: { id: drawerId, name, avatar } } }
+                // So e.data is { id: WORD_CHOICE, data: { id: drawerId, name, avatar } }
+                // We need e.data.data for the drawer info
+                var drawerInfo = e.data.data || {}; // Get drawer info from nested data
+                var drawerId = drawerInfo.id || e.data.id; // Try nested first, fallback to direct
+                console.log("[WORD_CHOICE] drawerInfo:", drawerInfo, "drawerId:", drawerId, "e.data:", e.data);
+                // Ensure w array exists
                 if (typeof w === 'undefined') {
                     console.warn("[WORD_CHOICE] w array is undefined, initializing empty array");
                     w = [];
                 }
-                // If server sent name and avatar directly, use those (most reliable)
-                if (drawerData && drawerData.name && drawerData.avatar && Array.isArray(drawerData.avatar) && drawerData.avatar.length >= 3) {
-                    // Create a temporary player object with server data
-                    s = {
-                        id: drawerId,
-                        name: drawerData.name,
-                        avatar: drawerData.avatar
-                    };
-                    console.log("[WORD_CHOICE] Using server-provided drawer:", s.name, s.avatar);
-                } else {
-                    // Fallback: try to find player in w array
-                    if (drawerId) {
-                        s = W(drawerId);
-                        console.log("[WORD_CHOICE] Looked up drawer via W():", s ? s.name : "not found");
-                    }
-                    // If not found, search w array directly
-                    if (!s && drawerId && w && Array.isArray(w)) {
-                        for (var i = 0; i < w.length; i++) {
-                            if (w[i] && w[i].id === drawerId) {
-                                s = w[i];
-                                console.log("[WORD_CHOICE] Found drawer in w array:", s.name);
-                                break;
-                            }
-                        }
-                    }
-                    // If still not found, use M (current drawer) which was set earlier
-                    if (!s && M && M !== -1) {
-                        s = W(M);
-                        console.log("[WORD_CHOICE] Using M as fallback:", s ? s.name : "not found");
-                    }
-                }
-                if (!s) {
-                    console.error("[WORD_CHOICE] ERROR: Could not find drawer! drawerId:", drawerId, "M:", M, "w.length:", w ? w.length : "w is undefined", "drawerData:", drawerData);
-                    // Use defaults if we can't find the drawer
+                // Try to find drawer in w array first (most reliable)
+                var s = drawerId ? W(drawerId) : null;
+                // If not found and server sent name/avatar, use those
+                if (!s && drawerInfo.name && drawerInfo.avatar && Array.isArray(drawerInfo.avatar) && drawerInfo.avatar.length >= 3) {
                     s = {
                         id: drawerId || "unknown",
-                        name: drawerData && drawerData.name ? drawerData.name : "Player",
-                        avatar: (drawerData && drawerData.avatar && Array.isArray(drawerData.avatar) && drawerData.avatar.length >= 3) ? drawerData.avatar : [0, 0, 0, 0]
+                        name: drawerInfo.name,
+                        avatar: drawerInfo.avatar
                     };
-                    console.log("[WORD_CHOICE] Using fallback drawer data:", s.name, s.avatar);
+                    console.log("[WORD_CHOICE] Using server-provided drawer data:", s.name, s.avatar);
                 }
-                var drawerName = s ? s.name : E("User");
-                var drawerAvatar = s ? (s.avatar && Array.isArray(s.avatar) && s.avatar.length >= 3 ? s.avatar : [0, 0, 0, 0]) : [0, 0, 0, 0];
+                // If still not found, use M (current drawer) as fallback
+                if (!s && M && M !== -1) {
+                    s = W(M);
+                    console.log("[WORD_CHOICE] Using M as fallback:", s ? s.name : "not found");
+                }
+                // Final fallback: use defaults
+                if (!s) {
+                    s = {
+                        id: drawerId || "unknown",
+                        name: drawerInfo.name || "Player",
+                        avatar: (drawerInfo.avatar && Array.isArray(drawerInfo.avatar) && drawerInfo.avatar.length >= 3) ? drawerInfo.avatar : [0, 0, 0, 0]
+                    };
+                    console.log("[WORD_CHOICE] Using final fallback:", s.name, s.avatar);
+                }
+                var drawerName = s.name || E("User");
+                var drawerAvatar = (s.avatar && Array.isArray(s.avatar) && s.avatar.length >= 3) ? s.avatar : [0, 0, 0, 0];
                 var L = (A.textContent = "",
                 A.appendChild(se("span", void 0, E("$ is choosing a word!", drawerName))),
                 de(drawerAvatar, drawerId == En));
@@ -1975,22 +1956,29 @@
         if (Un) {
             Un.textContent = E("Round $ of $", [e, t]);
             console.log("[ROUND] Round text set to:", Un.textContent);
-            // Make sure it's visible - force styles
+            // Make sure it's visible - force styles on element and all parents
             Un.style.display = "";
             Un.style.visibility = "visible";
             Un.style.opacity = "1";
             Un.style.color = "";
-            if (Un.parentElement) {
-                Un.parentElement.style.display = "";
-                Un.parentElement.style.visibility = "visible";
-                Un.parentElement.style.opacity = "1";
-                Un.parentElement.style.zIndex = "10";
+            Un.style.position = "";
+            Un.style.left = "";
+            Un.style.top = "";
+            Un.style.fontSize = "";
+            // Force parent visibility
+            var parent = Un.parentElement;
+            while (parent) {
+                parent.style.display = "";
+                parent.style.visibility = "visible";
+                parent.style.opacity = "1";
+                parent = parent.parentElement;
             }
-            // Also check game-bar parent
+            // Also ensure game-bar is visible
             var gameBar = c.querySelector("#game-bar");
             if (gameBar) {
                 gameBar.style.display = "";
                 gameBar.style.visibility = "visible";
+                gameBar.style.opacity = "1";
             }
         } else {
             console.error("[ROUND] ERROR: Un element not found!");
