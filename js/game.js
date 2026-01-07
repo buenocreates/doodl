@@ -1851,7 +1851,9 @@
         c.querySelector("#home").style.display = "none",
         c.querySelector("#game").style.display = "flex",
         x = e.me,
-        In = e.isPublic !== void 0 ? e.isPublic : (e.type !== void 0 ? e.type : !0),  // Store isPublic flag (backwards compat with type)
+        // CRITICAL: Set In based on isPublic or type
+        // true = public, false = private, 0 = public (from type), 1 = private (from type)
+        In = e.isPublic !== void 0 ? e.isPublic : (e.type !== void 0 ? (e.type === 0 ? true : false) : true),  // Store isPublic flag (backwards compat with type)
         Tn = e.code || e.id,  // Use room code if available (for private rooms), otherwise use room ID
         c.querySelector("#input-invite").value = h.location.origin + "/?" + (e.code || e.id),
         An = e.settings,
@@ -1934,12 +1936,10 @@
             }, 600)
         }) : (cn.classList.add("show"),
         // For public rooms in LOBBY state, show waiting overlay instead of settings panel
-        // CRITICAL: Show waiting screen UNLESS BOTH conditions are true:
-        // 1. In === false (explicitly private from GAME_DATA)
-        // 2. n.type === 1 (explicitly private from STATE packet)
+        // CRITICAL: Show waiting screen UNLESS In is EXPLICITLY false (private)
+        // Default to waiting screen for public rooms or if In is not set yet
         // This ensures public rooms ALWAYS show waiting screen, never settings
-        // Default to waiting screen if either is public or unknown
-        (n.id == J && !(In === false && n.type === 1)) ? (
+        (n.id == J && In !== false) ? (
             // Public room - show waiting overlay, check player count to determine message
             vn(A),
             (function() {
