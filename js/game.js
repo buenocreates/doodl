@@ -1979,21 +1979,49 @@
         if (Un) {
             Un.textContent = E("Round $ of $", [e, t]);
             console.log("[ia] Set text to:", Un.textContent, "Un element:", Un);
-            // Ensure the element and its parent are visible
+            // Ensure the element, its parent, and the game bar are visible and above overlays
             var roundParent = Un.parentElement;
             if (roundParent) {
                 console.log("[ia] Round parent exists:", roundParent.id, "current display:", roundParent.style.display);
-                roundParent.style.display = "";
+                // Explicitly set all styles to ensure visibility
+                roundParent.style.display = "block";
                 roundParent.style.visibility = "visible";
                 roundParent.style.opacity = "1";
-                console.log("[ia] After setting styles, computed display:", h.getComputedStyle(roundParent).display);
+                roundParent.style.position = "absolute";
+                roundParent.style.left = "60px";
+                roundParent.style.top = "14px";
+                roundParent.style.zIndex = "1000";
+                roundParent.style.pointerEvents = "none";
+                var computedParent = h.getComputedStyle(roundParent);
+                console.log("[ia] Round parent computed - display:", computedParent.display, "visibility:", computedParent.visibility, "opacity:", computedParent.opacity, "position:", computedParent.position, "left:", computedParent.left, "top:", computedParent.top);
             } else {
                 console.error("[ia] Round parent not found!");
             }
-            Un.style.display = "";
+            var gameBar = c.querySelector("#game-bar");
+            if (gameBar) {
+                gameBar.style.display = "";
+                gameBar.style.visibility = "visible";
+                gameBar.style.opacity = "1";
+                gameBar.style.zIndex = "5";
+                gameBar.style.position = "relative";
+                var computedBar = h.getComputedStyle(gameBar);
+                console.log("[ia] Game bar computed - display:", computedBar.display, "visibility:", computedBar.visibility);
+            }
+            // Explicitly set text element styles
+            Un.style.display = "block";
             Un.style.visibility = "visible";
             Un.style.opacity = "1";
-            console.log("[ia] Un computed display:", h.getComputedStyle(Un).display, "visibility:", h.getComputedStyle(Un).visibility);
+            Un.style.zIndex = "1001";
+            Un.style.position = "relative";
+            Un.style.fontSize = "1.4em";
+            // Force white color to ensure visibility (override CSS variable)
+            Un.style.color = "#ffffff";
+            Un.style.fontWeight = "700";
+            var computed = h.getComputedStyle(Un);
+            console.log("[ia] Un computed - display:", computed.display, "visibility:", computed.visibility, "opacity:", computed.opacity, "color:", computed.color, "fontSize:", computed.fontSize, "position:", computed.position);
+            // Also log the actual element's bounding box
+            var rect = Un.getBoundingClientRect();
+            console.log("[ia] Un bounding box - left:", rect.left, "top:", rect.top, "width:", rect.width, "height:", rect.height, "visible:", rect.width > 0 && rect.height > 0);
         } else {
             console.error("[ia] Un element not found!");
         }
