@@ -1975,18 +1975,27 @@
     function ia(e) {
         var e = (Rn = e) + 1
           , t = An[te.ROUNDS];
+        console.log("[ia] Called with round:", e - 1, "Un exists:", !!Un, "L.id:", L ? L.id : "null");
         if (Un) {
             Un.textContent = E("Round $ of $", [e, t]);
+            console.log("[ia] Set text to:", Un.textContent, "Un element:", Un);
             // Ensure the element and its parent are visible
             var roundParent = Un.parentElement;
             if (roundParent) {
+                console.log("[ia] Round parent exists:", roundParent.id, "current display:", roundParent.style.display);
                 roundParent.style.display = "";
                 roundParent.style.visibility = "visible";
                 roundParent.style.opacity = "1";
+                console.log("[ia] After setting styles, computed display:", h.getComputedStyle(roundParent).display);
+            } else {
+                console.error("[ia] Round parent not found!");
             }
             Un.style.display = "";
             Un.style.visibility = "visible";
             Un.style.opacity = "1";
+            console.log("[ia] Un computed display:", h.getComputedStyle(Un).display, "visibility:", h.getComputedStyle(Un).visibility);
+        } else {
+            console.error("[ia] Un element not found!");
         }
     }
     function la() {
@@ -2159,7 +2168,7 @@
                     }, 10);
                 }
             }
-        })()) : Pn.classList.remove("room"), e.id == F && (ia(e.data), 0 == e.data) && la(), e.id == Z)
+        })()) : Pn.classList.remove("room"), e.id == F && (console.log("[ROUND_START] Received ROUND_START, calling ia(", e.data, ")"), ia(e.data), 0 == e.data) && la(), e.id == Z)
         ) {
             x != M && ga(e.data.word);
             for (var o = 0; o < e.data.scores.length; o += 3) {
