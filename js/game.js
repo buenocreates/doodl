@@ -1392,6 +1392,13 @@
             A.textContent = E("Round $", e.data + 1);
             // Ensure round text in game-bar is visible (it's separate from overlay)
             if (Un) {
+                var roundParent = Un.parentElement;
+                if (roundParent) {
+                    roundParent.style.display = "";
+                    roundParent.style.visibility = "visible";
+                    roundParent.style.opacity = "1";
+                    roundParent.style.position = "absolute";
+                }
                 Un.style.display = "";
                 Un.style.visibility = "visible";
                 Un.style.opacity = "1";
@@ -1976,7 +1983,6 @@
                 roundParent.style.display = "";
                 roundParent.style.visibility = "visible";
                 roundParent.style.opacity = "1";
-                roundParent.style.position = "";
             }
             Un.style.display = "";
             Un.style.visibility = "visible";
