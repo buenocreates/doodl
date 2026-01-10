@@ -1389,24 +1389,10 @@
             break;
         case F:
             console.log("[bn] ROUND_START case F, e.data:", e.data, "will display as Round", e.data + 1);
-            // CRITICAL: Set round text in game bar when ROUND_START is received
-            // e.data is the round number (0-indexed), so we call ia(e.data) to set "Round X of Y"
-            ia(e.data); // Set round text in game bar ("Round X of Y")
+            // CRITICAL: Call ia() to set "Round X of Y" in game bar when round starts
+            ia(e.data);
             vn(A),
-            A.textContent = E("Round $", e.data + 1); // Show "Round X" in overlay
-            // Ensure round text in game-bar is visible (it's separate from overlay)
-            if (Un) {
-                var roundParent = Un.parentElement;
-                if (roundParent) {
-                    roundParent.style.display = "block";
-                    roundParent.style.visibility = "visible";
-                    roundParent.style.opacity = "1";
-                    roundParent.style.position = "absolute";
-                }
-                Un.style.display = "block";
-                Un.style.visibility = "visible";
-                Un.style.opacity = "1";
-            }
+            A.textContent = E("Round $", e.data + 1);
             break;
         case G:
             vn(A),
@@ -1943,7 +1929,7 @@
         Ga(),
         Ka(),
         console.log("[GAME_DATA] Setting round to:", e.round, "will display as Round", e.round + 1),
-        // CRITICAL: Always set round text when GAME_DATA is received to ensure it's visible
+        console.log("[GAME_DATA] Setting round to:", e.round, "will display as Round", e.round + 1),
         ia(e.round),
         fa(e.owner),
         sa(e.state, !0),
@@ -1982,52 +1968,75 @@
         console.log("[ia] Called with round:", e - 1, "Un exists:", !!Un, "L.id:", L ? L.id : "null");
         if (Un) {
             Un.textContent = E("Round $ of $", [e, t]);
-            console.log("[ia] Set text to:", Un.textContent, "Un element:", Un);
-            // Ensure the element, its parent, and the game bar are visible and above overlays
+            console.log("[ia] Set text to:", Un.textContent);
+            // Get parent #game-round element
             var roundParent = Un.parentElement;
-            if (roundParent) {
-                console.log("[ia] Round parent exists:", roundParent.id, "current display:", roundParent.style.display);
-                // Explicitly set all styles to ensure visibility
+            var gameBar = c.querySelector("#game-bar");
+            
+            // CRITICAL: Ensure game-bar is visible and has correct positioning
+            if (gameBar) {
+                gameBar.style.display = "block";
+                gameBar.style.visibility = "visible";
+                gameBar.style.opacity = "1";
+                // Ensure position: relative is set (CSS has it, but ensure it's applied)
+                if (h.getComputedStyle(gameBar).position !== "relative") {
+                    gameBar.style.position = "relative";
+                }
+            }
+            
+            // CRITICAL: Ensure #game-round is visible and positioned correctly
+            if (roundParent && roundParent.id === "game-round") {
+                // Force visibility
                 roundParent.style.display = "block";
                 roundParent.style.visibility = "visible";
                 roundParent.style.opacity = "1";
-                roundParent.style.position = "absolute";
-                roundParent.style.left = "60px";
-                roundParent.style.top = "14px";
-                roundParent.style.zIndex = "1000";
-                roundParent.style.pointerEvents = "none";
+                // Ensure position: absolute is set (CSS has it)
+                if (h.getComputedStyle(roundParent).position !== "absolute") {
+                    roundParent.style.position = "absolute";
+                }
+                // Ensure left: 60px and top: 14px (CSS has it, but ensure it's applied)
                 var computedParent = h.getComputedStyle(roundParent);
-                console.log("[ia] Round parent computed - display:", computedParent.display, "visibility:", computedParent.visibility, "opacity:", computedParent.opacity, "position:", computedParent.position, "left:", computedParent.left, "top:", computedParent.top);
+                if (computedParent.left !== "60px") {
+                    roundParent.style.left = "60px";
+                }
+                if (computedParent.top !== "14px") {
+                    roundParent.style.top = "14px";
+                }
+                var computedParent = h.getComputedStyle(roundParent);
+                var parentRect = roundParent.getBoundingClientRect();
+                console.log("[ia] Round parent - computed left:", computedParent.left, "top:", computedParent.top, "position:", computedParent.position, "display:", computedParent.display, "bounding box left:", parentRect.left);
             } else {
-                console.error("[ia] Round parent not found!");
+                console.error("[ia] Round parent not found or wrong element!");
             }
-            var gameBar = c.querySelector("#game-bar");
-            if (gameBar) {
-                gameBar.style.display = "";
-                gameBar.style.visibility = "visible";
-                gameBar.style.opacity = "1";
-                gameBar.style.zIndex = "5";
-                gameBar.style.position = "relative";
-                var computedBar = h.getComputedStyle(gameBar);
-                console.log("[ia] Game bar computed - display:", computedBar.display, "visibility:", computedBar.visibility);
-            }
-            // Explicitly set text element styles
+            
+            // CRITICAL: Ensure .text element is visible
             Un.style.display = "block";
             Un.style.visibility = "visible";
             Un.style.opacity = "1";
-            Un.style.zIndex = "1001";
-            Un.style.position = "relative";
-            Un.style.fontSize = "1.4em";
-            // Force white color to ensure visibility (override CSS variable)
-            Un.style.color = "#ffffff";
-            Un.style.fontWeight = "700";
+            // Ensure color is set from CSS variable (don't override)
             var computed = h.getComputedStyle(Un);
-            console.log("[ia] Un computed - display:", computed.display, "visibility:", computed.visibility, "opacity:", computed.opacity, "color:", computed.color, "fontSize:", computed.fontSize, "position:", computed.position);
-            // Also log the actual element's bounding box
-            var rect = Un.getBoundingClientRect();
-            console.log("[ia] Un bounding box - left:", rect.left, "top:", rect.top, "width:", rect.width, "height:", rect.height, "visible:", rect.width > 0 && rect.height > 0);
+            // If color is transparent or not set, force black (for light theme) or white (for dark theme)
+            if (!computed.color || computed.color === "rgba(0, 0, 0, 0)" || computed.color === "transparent") {
+                // Check game-bar background to determine text color
+                var barBg = h.getComputedStyle(gameBar).backgroundColor;
+                if (barBg && (barBg.includes("255") || barBg === "white" || barBg === "rgb(255, 255, 255)")) {
+                    Un.style.color = "#000000"; // Black text on white background
+                } else {
+                    Un.style.color = "#ffffff"; // White text on dark background
+                }
+            }
+            // Ensure fontSize is set (CSS has 1.4em)
+            if (!computed.fontSize || computed.fontSize === "0px") {
+                Un.style.fontSize = "1.4em";
+            }
+            Un.style.fontWeight = "700";
+            
+            var computed = h.getComputedStyle(Un);
+            var textRect = Un.getBoundingClientRect();
+            console.log("[ia] Final - text:", Un.textContent, "computed color:", computed.color, "fontSize:", computed.fontSize, "display:", computed.display, "bounding box left:", textRect.left, "top:", textRect.top, "width:", textRect.width, "height:", textRect.height);
+            console.log("[ia] Element should be visible at:", "left:", textRect.left, "top:", textRect.top);
         } else {
-            console.error("[ia] Un element not found!");
+            console.error("[ia] Un element (#game-round .text) not found!");
         }
     }
     function la() {
@@ -2071,11 +2080,27 @@
         }) : (cn.classList.add("show"),
         // For ROUND_START (F), always show "Round X" in overlay first
         n.id == F ? (
-            // CRITICAL: Set round text in game bar when ROUND_START is received
-            // n.data is the round number (0-indexed), so we call ia(n.data) to set "Round X of Y"
-            console.log("[ROUND_START] Received ROUND_START, n.data:", n.data, "will display as Round", n.data + 1),
-            ia(n.data), // Set round text in game bar
-            bn(n), // Show "Round X" in overlay
+            console.log("[ROUND_START] Received ROUND_START in sa(), n.data:", n.data, "calling ia() to set game bar text, then bn() for overlay"),
+            ia(n.data), // Set "Round X of Y" in game bar FIRST - this ensures it's visible
+            // Force visibility after a tiny delay to ensure CSS has applied
+            setTimeout(function() {
+                if (Un && Un.parentElement && Un.parentElement.id === "game-round") {
+                    var roundEl = Un.parentElement;
+                    var gameBar = c.querySelector("#game-bar");
+                    if (gameBar) {
+                        // Ensure game-bar is visible
+                        gameBar.style.display = "block";
+                        gameBar.style.visibility = "visible";
+                        // Ensure round element is visible
+                        roundEl.style.display = "block";
+                        roundEl.style.visibility = "visible";
+                        Un.style.display = "block";
+                        Un.style.visibility = "visible";
+                        console.log("[ROUND_START] Forced visibility - game-bar display:", h.getComputedStyle(gameBar).display, "round display:", h.getComputedStyle(roundEl).display);
+                    }
+                }
+            }, 10),
+            bn(n), // Then show "Round X" in overlay
             yn({
                 top: 0,
                 opacity: 1
@@ -2204,7 +2229,7 @@
                     }, 10);
                 }
             }
-        })()) : Pn.classList.remove("room"), e.id == F && (console.log("[ROUND_START] Received ROUND_START, calling ia(", e.data, ")"), ia(e.data), 0 == e.data) && la(), e.id == Z)
+        })()) : Pn.classList.remove("room"), e.id == F && (console.log("[ROUND_START] Received ROUND_START in sa(), e.data:", e.data, "calling ia()"), ia(e.data), 0 == e.data) && la(), e.id == Z)
         ) {
             x != M && ga(e.data.word);
             for (var o = 0; o < e.data.scores.length; o += 3) {
