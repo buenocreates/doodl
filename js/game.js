@@ -2051,10 +2051,39 @@
     }
     function sa(e, t) {
         var n, a;
+        console.log("[sa] Called with e.id:", e ? e.id : "null", "F =", F, "n will be set to e");
         if (n = L = e,
         null != fn && (h.cancelAnimationFrame(fn),
         fn = void 0),
-        n.id == j ? (
+        // CRITICAL: Check ROUND_START FIRST, before checking overlay state
+        console.log("[sa] After assignment, n.id:", n.id, "F =", F, "n.id == F:", n.id == F),
+        n.id == F ? (
+            console.log("[ROUND_START] Received ROUND_START in sa(), n.data:", n.data, "calling ia() to set game bar text, then bn() for overlay"),
+            // Ensure overlay is visible
+            cn.classList.add("show"),
+            ia(n.data), // Set "Round X of Y" in game bar FIRST - this ensures it's visible
+            // Force visibility immediately
+            (function() {
+                if (Un && Un.parentElement && Un.parentElement.id === "game-round") {
+                    var roundEl = Un.parentElement;
+                    var gameBar = c.querySelector("#game-bar");
+                    if (gameBar) {
+                        gameBar.style.display = "block";
+                        gameBar.style.visibility = "visible";
+                        roundEl.style.display = "block";
+                        roundEl.style.visibility = "visible";
+                        Un.style.display = "block";
+                        Un.style.visibility = "visible";
+                        console.log("[ROUND_START] Forced visibility - game-bar display:", h.getComputedStyle(gameBar).display, "round display:", h.getComputedStyle(roundEl).display);
+                    }
+                }
+            })(),
+            bn(n), // Then show "Round X" in overlay
+            yn({
+                top: 0,
+                opacity: 1
+            }, 600)
+        ) : n.id == j ? (
             // Clear waiting dots interval when game starts
             h._waitingDotsInterval && (clearInterval(h._waitingDotsInterval), h._waitingDotsInterval = null),
             // CRITICAL: Ensure round text stays visible when DRAWING phase starts
@@ -2097,34 +2126,6 @@
                 opacity: 1
             }, 600)
         }) : (cn.classList.add("show"),
-        // For ROUND_START (F), always show "Round X" in overlay first
-        n.id == F ? (
-            console.log("[ROUND_START] Received ROUND_START in sa(), n.data:", n.data, "calling ia() to set game bar text, then bn() for overlay"),
-            ia(n.data), // Set "Round X of Y" in game bar FIRST - this ensures it's visible
-            // Force visibility after a tiny delay to ensure CSS has applied
-            setTimeout(function() {
-                if (Un && Un.parentElement && Un.parentElement.id === "game-round") {
-                    var roundEl = Un.parentElement;
-                    var gameBar = c.querySelector("#game-bar");
-                    if (gameBar) {
-                        // Ensure game-bar is visible
-                        gameBar.style.display = "block";
-                        gameBar.style.visibility = "visible";
-                        // Ensure round element is visible
-                        roundEl.style.display = "block";
-                        roundEl.style.visibility = "visible";
-                        Un.style.display = "block";
-                        Un.style.visibility = "visible";
-                        console.log("[ROUND_START] Forced visibility - game-bar display:", h.getComputedStyle(gameBar).display, "round display:", h.getComputedStyle(roundEl).display);
-                    }
-                }
-            }, 10),
-            bn(n), // Then show "Round X" in overlay
-            yn({
-                top: 0,
-                opacity: 1
-            }, 600)
-        ) : (
         // For public rooms in LOBBY state, show waiting overlay instead of settings panel
         // CRITICAL: ALWAYS show waiting screen for LOBBY state UNLESS explicitly private
         // Default to public (waiting screen) if In is not explicitly false
@@ -2248,7 +2249,7 @@
                     }, 10);
                 }
             }
-        })()) : Pn.classList.remove("room"), e.id == F && (console.log("[ROUND_START] Received ROUND_START in sa(), e.data:", e.data, "calling ia()"), ia(e.data), 0 == e.data) && la(), e.id == Z)
+        })()) : Pn.classList.remove("room"), e.id == F && (console.log("[ROUND_START] Received ROUND_START in sa() end, e.data:", e.data, "calling ia()"), ia(e.data), 0 == e.data) && la(), e.id == Z
         ) {
             x != M && ga(e.data.word);
             for (var o = 0; o < e.data.scores.length; o += 3) {
@@ -2266,21 +2267,21 @@
             l ? R.playSound(wn) : R.playSound(kn),
             y(E("The word was '$'", e.data.word), "", f($e), !0)
         } else
-            e.id != j && (N[0].textContent = E("WAITING"),
-            N[0].classList.add("waiting"),
-            N[1].style.display = "none",
-            N[2].style.display = "none");
-        if (e.id == j) {
-            if (M = e.data.id,
+        e.id != j && (N[0].textContent = E("WAITING"),
+        N[0].classList.add("waiting"),
+        N[1].style.display = "none",
+        N[2].style.display = "none"),
+        e.id == j && (M = e.data.id,
             R.playSound(Sn),
             Kt(!0),
             e.data.drawCommands && (v = e.data.drawCommands),
             y(E("$ is drawing now!", W(M).name), "", f(De), !0),
-            !t)
+            !t && (function() {
                 for (o = 0; o < w.length; o++)
                     Fa(w[o], !1),
                     // Clear rate icon when new drawing starts
                     w[o].element.icons && w[o].element.icons[2] && w[o].element.icons[2].classList.remove("visible");
+            })(),
             N[0].classList.remove("waiting"),
             M == x ? (a = e.data.word,
             N[0].textContent = E("DRAW THIS"),
@@ -2331,28 +2332,30 @@
                 }
                 pa(wordData, !1);
             })(),
-            ma(e.data.hints))
-        } else {
-            M = -1;
+            ma(e.data.hints))),
+        e.id != j && (M = -1,
+        (function() {
             for (o = 0; o < w.length; o++)
                 Fa(w[o], !1);
-            // Enable chat input when not in DRAWING state
-            _n[0].disabled = !1,
-            _n[1].disabled = !1,
-            _n[0].removeAttribute("readonly"),
-            _n[1].removeAttribute("readonly")
-        }
-        if (e.id == X && 0 < e.data.length) {
+        })(),
+        // Enable chat input when not in DRAWING state
+        _n[0].disabled = !1,
+        _n[1].disabled = !1,
+        _n[0].removeAttribute("readonly"),
+        _n[1].removeAttribute("readonly")),
+        e.id == X && 0 < e.data.length && (function() {
             for (var s = [], i = 0, o = 0; o < e.data.length; o++) {
                 var c, d = e.data[o][0], u = e.data[o][1];
                 (c = W(d)) && 0 == u && (i = c.score,
                 s.push(c.name))
             }
             1 == s.length ? y(E("$ won with a score of $!", [s[0], i]), "", f(Ae), !0) : 1 < s.length && y(E("$ and $ won with a score of $!", [s.slice(0, -1).join(", "), s[s.length - 1], i]), "", f(Ae), !0)
-        }
-        for (o = 0; o < w.length; o++)
-            Va(w[o], w[o].id == M);
-        Ga()
+        })(),
+        (function() {
+            for (o = 0; o < w.length; o++)
+                Va(w[o], w[o].id == M);
+            Ga()
+        })()
     }
     function ca(e) {
         S && S.connected && L.id == j && (S.emit("data", {
