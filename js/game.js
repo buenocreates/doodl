@@ -1498,12 +1498,6 @@
                 I.querySelector(".winner-text").textContent = E("Nobody won!");
             break;
         case V:
-            console.log("[WORD_CHOICE] Received WORD_CHOICE state, e.data:", e.data);
-            // If e.data is empty, wait for the next packet with actual data
-            if (!e.data || (Object.keys(e.data).length === 0 && !e.data.words && !e.data.id)) {
-                console.log("[WORD_CHOICE] Empty data received, waiting for next packet");
-                return;
-            }
             // Set current drawer during word choice (for green chat messages)
             // If we're the drawer (e.data.words exists), M is us (x)
             // If we're not the drawer (e.data.id exists), M is the drawer's ID
@@ -1971,7 +1965,7 @@
             console.log("[ia] Set text to:", Un.textContent);
             // Get parent #game-round element
             var roundParent = Un.parentElement;
-            var gameBar = c.querySelector("#game-bar");
+            var gameBar = h.document.querySelector("#game-bar");
             
             // CRITICAL: Ensure game-bar is visible and has correct positioning
             if (gameBar) {
@@ -2064,7 +2058,7 @@
             (function() {
                 if (Un && Un.parentElement && Un.parentElement.id === "game-round") {
                     var roundEl = Un.parentElement;
-                    var gameBar = c.querySelector("#game-bar");
+                    var gameBar = h.document.querySelector("#game-bar");
                     if (gameBar) {
                         gameBar.style.display = "block";
                         gameBar.style.visibility = "visible";
@@ -2091,7 +2085,7 @@
             (function() {
                 if (Un && Un.parentElement && Un.parentElement.id === "game-round") {
                     var roundEl = Un.parentElement;
-                    var gameBar = c.querySelector("#game-bar");
+                    var gameBar = h.document.querySelector("#game-bar");
                     if (gameBar) {
                         gameBar.style.display = "block";
                         gameBar.style.visibility = "visible";
