@@ -1886,11 +1886,13 @@
                 console.log("[GAME_DATA] Processing", h._pendingWordChoice.length, "pending WORD_CHOICE state(s)");
                 var pendingStates = h._pendingWordChoice;
                 h._pendingWordChoice = []; // Clear the queue
-                // Process each pending WORD_CHOICE state
-                for (var i = 0; i < pendingStates.length; i++) {
-                    console.log("[GAME_DATA] Processing pending WORD_CHOICE:", pendingStates[i]);
-                    bn(pendingStates[i]); // Process the WORD_CHOICE state now that x is set
-                }
+                // Process each pending WORD_CHOICE state after a small delay to ensure GAME_DATA is fully processed
+                setTimeout(function() {
+                    for (var i = 0; i < pendingStates.length; i++) {
+                        console.log("[GAME_DATA] Processing pending WORD_CHOICE:", pendingStates[i]);
+                        sa(pendingStates[i], !0); // Use sa() to ensure overlay animation happens
+                    }
+                }, 50);
             }
         })(),
         // CRITICAL: Set In based on isPublic or type
