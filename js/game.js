@@ -1502,16 +1502,13 @@
             break;
         case V:
             // Set current drawer during word choice (for green chat messages)
-            // If we're the drawer (e.data.words exists), M is us (x)
-            // If we're not the drawer (e.data.id exists), M is the drawer's ID
             if (e.data && e.data.words) {
                 M = x; // We're the drawer
             } else if (e.data && e.data.id) {
-                // Set M to the drawer's ID from server data
-                M = e.data.id;
+                M = e.data.id; // Set M to the drawer's ID
             }
             if (e.data && e.data.words) {
-                // Enable chat input for drawer during word choice (they can type, messages appear in green)
+                // Enable chat input for drawer during word choice
                 _n[0].disabled = false,
                 _n[1].disabled = false,
                 _n[0].readOnly = false,
@@ -1558,83 +1555,20 @@
                 } else {
                     A.textContent = E("Choose a word");
                     for (o = 0; o < e.data.words.length; o++) {
-                        var wordEl = $("word", e.data.words[o]);
-                        wordEl.index = o,
-                        D(wordEl, "click", function() {
+                        var M = $("word", e.data.words[o]);
+                        M.index = o,
+                        D(M, "click", function() {
                             ha(this.index)
                         }),
-                        un.appendChild(wordEl)
+                        un.appendChild(M)
                     }
                 }
             } else {
-                // For non-drawers: Show "User is choosing a word" overlay
-                // ROUND_START already showed "Round 1" in overlay, so we just show the drawer choosing
-                // In bn(), e is the state object: { id: WORD_CHOICE, time: ..., data: { id: drawerId, name: ..., avatar: ... } }
-                // So e.data is { id: drawerId, name: ..., avatar: ... }
-                var drawerId = e.data && e.data.id ? e.data.id : null;
-                var drawerName = e.data && e.data.name ? e.data.name : null;
-                var drawerAvatar = (e.data && e.data.avatar && Array.isArray(e.data.avatar) && e.data.avatar.length >= 3) ? e.data.avatar : null;
-                
-                // ALWAYS try player list first - it's the most reliable source
-                var s = drawerId ? W(drawerId) : null;
-                if (s) {
-                    // Use player list data (always correct and up-to-date)
-                    drawerName = s.name;
-                    drawerAvatar = s.avatar;
-                } else if (drawerName && drawerAvatar) {
-                    // Use server-provided data if player not found in list
-                } else {
-                    // Fallback - if drawer info is missing, try to find drawer from player list
-                    // This can happen if data arrives out of order or drawer left
-                    if (w && w.length > 0) {
-                        // Try to find the drawer by checking who has the drawer flag or is first in list
-                        // This is a best-effort fallback
-                        var potentialDrawer = w.find(function(p) { return p.id && p.id !== x; }) || w[0];
-                        if (potentialDrawer) {
-                            drawerId = potentialDrawer.id;
-                            drawerName = potentialDrawer.name;
-                            drawerAvatar = potentialDrawer.avatar;
-                            s = potentialDrawer;
-                        }
-                    }
-                    // If still no drawer info, silently skip showing the overlay
-                    if (!drawerId || !drawerName) {
-                        return; // Don't show overlay if we don't have drawer info
-                    }
-                }
-                
-                // Check if overlay is currently showing "Round X" - if so, wait a bit before showing "User is choosing a word"
-                // This ensures "Round 1" is visible first
-                var currentlyShowingRound = A && A.textContent && A.textContent.indexOf("Round") !== -1;
-                if (currentlyShowingRound) {
-                    // Overlay is showing "Round X", wait a bit before showing "User is choosing a word"
-                    setTimeout(function() {
-                        vn(A);
-                        ce(A);
-                        var L = drawerName;
-                        var avatarEl = de(drawerAvatar, drawerId == En);
-                        if (s) {
-                            pe(avatarEl, Ya(s));
-                        }
-                        A.appendChild(se("span", void 0, E("$ is choosing a word!", L)));
-                        avatarEl.style.width = "2em";
-                        avatarEl.style.height = "2em";
-                        A.appendChild(avatarEl);
-                    }, 500); // Small delay to ensure "Round 1" was visible
-                } else {
-                    // Show "User is choosing a word" overlay immediately
-                    vn(A);
-                    ce(A);
-                    var L = drawerName;
-                    var avatarEl = de(drawerAvatar, drawerId == En);
-                    if (s) {
-                        pe(avatarEl, Ya(s));
-                    }
-                    A.appendChild(se("span", void 0, E("$ is choosing a word!", L)));
-                    avatarEl.style.width = "2em";
-                    avatarEl.style.height = "2em";
-                    A.appendChild(avatarEl);
-                }
+                vn(A);
+                var s = W(e.data && e.data.id ? e.data.id : null);
+                var L = s ? s.name : E("User"),
+                    L = (A.textContent = "", A.appendChild(se("span", void 0, E("$ is choosing a word!", L))), de(s ? s.avatar : [0, 0, 0, 0], e.data && e.data.id == En));
+                s && pe(L, Ya(s)), L.style.width = "2em", L.style.height = "2em", A.appendChild(L)
             }
         }
     }
@@ -2014,7 +1948,7 @@
             // Check if public room before calling bn(n)
             var roomIdToCheck = Tn || "";
             var isPublicRoom = (In !== false) || (roomIdToCheck && typeof roomIdToCheck === "string" && roomIdToCheck.indexOf("PUBLIC-") === 0);
-            if (!isPublicRoom || n.id != J) {
+            if (!(n.id == J && isPublicRoom)) {
                 bn(n);
             }
             yn({
@@ -2022,14 +1956,14 @@
                 opacity: 1
             }, 600)
         }) : (cn.classList.add("show"),
-        // For ROUND_START (F), always show "Round X" in overlay first
-        n.id == F ? (
-            bn(n),
-            yn({
-                top: 0,
-                opacity: 1
-            }, 600)
-        ) : (
+        // For non-LOBBY states, call bn(n) immediately
+        (function() {
+            var roomIdToCheck = Tn || "";
+            var isPublicRoom = (In !== false) || (roomIdToCheck && typeof roomIdToCheck === "string" && roomIdToCheck.indexOf("PUBLIC-") === 0);
+            if (!(n.id == J && isPublicRoom)) {
+                bn(n);
+            }
+        })(),
         // For public rooms in LOBBY state, show waiting overlay instead of settings panel
         // CRITICAL: ALWAYS show waiting screen for LOBBY state UNLESS explicitly private
         // Default to public (waiting screen) if In is not explicitly false
@@ -2102,7 +2036,7 @@
                 top: 0,
                 opacity: 1
             }, 600)
-        ))),
+        )),
         a = e.time,
         oo(),
         ro(a),
