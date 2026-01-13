@@ -2156,8 +2156,9 @@
         ia(e.data),
         // Ensure round text is visible
         Un && (Un.style.display = "", Un.style.visibility = "visible", Un.style.opacity = "1", Un.parentElement && (Un.parentElement.style.display = "", Un.parentElement.style.visibility = "visible")),
-        0 == e.data) && la(), e.id == Z) {
-            x != M && ga(e.data.word);
+        0 == e.data) && la(),
+        e.id == Z && (x != M && ga(e.data.word),
+        (function() {
             for (var o = 0; o < e.data.scores.length; o += 3) {
                 var r = e.data.scores[o + 0]
                   , i = e.data.scores[o + 1];
@@ -2172,8 +2173,8 @@
                 }
             l ? R.playSound(wn) : R.playSound(kn),
             y(E("The word was '$'", e.data.word), "", f($e), !0)
-        } else
-            e.id != j && (N[0].textContent = E("WAITING"),
+        })()),
+        e.id != j && (N[0].textContent = E("WAITING"),
             N[0].classList.add("waiting"),
             N[1].style.display = "none",
             N[2].style.display = "none");
