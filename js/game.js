@@ -1501,17 +1501,14 @@
                 I.querySelector(".winner-text").textContent = E("Nobody won!");
             break;
         case V:
-            console.log("[WORD_CHOICE] Received WORD_CHOICE state, e.data:", e.data);
             // Set current drawer during word choice (for green chat messages)
             // If we're the drawer (e.data.words exists), M is us (x)
             // If we're not the drawer (e.data.id exists), M is the drawer's ID
             if (e.data && e.data.words) {
                 M = x; // We're the drawer
-                console.log("[WORD_CHOICE] We are the drawer, M set to:", M);
             } else if (e.data && e.data.id) {
                 // Set M to the drawer's ID from server data
                 M = e.data.id;
-                console.log("[WORD_CHOICE] We are NOT the drawer, M set to drawer ID:", M);
             }
             if (e.data && e.data.words) {
                 // Enable chat input for drawer during word choice (they can type, messages appear in green)
@@ -1531,7 +1528,6 @@
                 _n[1].removeAttribute("readonly");
             }
             if (e.data && e.data.words) {
-                console.log("[WORD_CHOICE] We are the drawer, showing word choices, e.data:", e.data);
                 if (vn(A),
                 vn(un),
                 ce(un),
@@ -1588,10 +1584,23 @@
                 } else if (drawerName && drawerAvatar) {
                     // Use server-provided data if player not found in list
                 } else {
-                    // Fallback - should not happen, but if it does, don't show anything
-                    // The server always sends drawer info, so this is an error case
-                    console.error("[WORD_CHOICE] ERROR: No drawer info available!");
-                    return; // Don't show overlay if we don't have drawer info
+                    // Fallback - if drawer info is missing, try to find drawer from player list
+                    // This can happen if data arrives out of order or drawer left
+                    if (w && w.length > 0) {
+                        // Try to find the drawer by checking who has the drawer flag or is first in list
+                        // This is a best-effort fallback
+                        var potentialDrawer = w.find(function(p) { return p.id && p.id !== x; }) || w[0];
+                        if (potentialDrawer) {
+                            drawerId = potentialDrawer.id;
+                            drawerName = potentialDrawer.name;
+                            drawerAvatar = potentialDrawer.avatar;
+                            s = potentialDrawer;
+                        }
+                    }
+                    // If still no drawer info, silently skip showing the overlay
+                    if (!drawerId || !drawerName) {
+                        return; // Don't show overlay if we don't have drawer info
+                    }
                 }
                 
                 // Check if overlay is currently showing "Round X" - if so, wait a bit before showing "User is choosing a word"
@@ -1915,8 +1924,6 @@
         // true = public, false = private, 0 = public (from type), 1 = private (from type)
         In = e.isPublic !== void 0 ? e.isPublic : (e.type !== void 0 ? (e.type === 0 ? true : false) : true),  // Store isPublic flag (backwards compat with type)
         Tn = e.code || e.id,  // Use room code if available (for private rooms), otherwise use room ID
-        // DEBUG: Log GAME_DATA to verify
-        console.log("[GAME_DATA] Received - isPublic:", e.isPublic, "type:", e.type, "In:", In, "Tn:", Tn, "code:", e.code, "id:", e.id),
         c.querySelector("#input-invite").value = h.location.origin + "/?" + (e.code || e.id),
         An = e.settings,
         oa(),
@@ -1926,8 +1933,6 @@
             za(e.users[t], !1);
         Ga(),
         Ka(),
-        console.log("[GAME_DATA] Setting round to:", e.round, "will display as Round", e.round + 1),
-        console.log("[GAME_DATA] Setting round to:", e.round, "will display as Round", e.round + 1),
         ia(e.round),
         fa(e.owner),
         sa(e.state, !0),
@@ -1963,10 +1968,8 @@
     function ia(e) {
         var e = (Rn = e) + 1
           , t = An[te.ROUNDS];
-        console.log("[ROUND] ia() called with e=", e - 1, "will display Round", e, "of", t, "Un:", Un);
         if (Un) {
             Un.textContent = E("Round $ of $", [e, t]);
-            console.log("[ROUND] Set text to:", Un.textContent);
             // Ensure the element is visible
             if (Un.parentElement) {
                 Un.parentElement.style.display = "";
@@ -2036,10 +2039,6 @@
             var isPublicRoom = (In !== false) || (roomIdToCheck && typeof roomIdToCheck === "string" && roomIdToCheck.indexOf("PUBLIC-") === 0);
             // FORCE waiting screen for LOBBY state unless we're 100% sure it's private (In === false AND room doesn't start with PUBLIC-)
             // CRITICAL: Default to waiting screen (public) unless explicitly private
-            // DEBUG: Log the values to help debug
-            if (n.id == J) {
-                console.log("[STATE] LOBBY state - In:", In, "Tn:", Tn, "roomIdToCheck:", roomIdToCheck, "isPublicRoom:", isPublicRoom, "willShowWaiting:", (In !== false || (roomIdToCheck && typeof roomIdToCheck === "string" && roomIdToCheck.indexOf("PUBLIC-") === 0)));
-            }
             // ALWAYS show waiting screen for LOBBY unless In === false AND room doesn't start with PUBLIC-
             var shouldShowWaiting = (n.id == J && (In !== false || (roomIdToCheck && typeof roomIdToCheck === "string" && roomIdToCheck.indexOf("PUBLIC-") === 0)));
             return shouldShowWaiting;
@@ -2126,18 +2125,14 @@
             var roomIdToCheck = Tn || "";
             var isPublicRoom = (In !== false) || (roomIdToCheck && typeof roomIdToCheck === "string" && roomIdToCheck.indexOf("PUBLIC-") === 0);
             // Only show settings if explicitly private AND room ID doesn't start with PUBLIC-
-            // DEBUG: Log settings panel decision
-            console.log("[SETTINGS] LOBBY state - In:", In, "Tn:", Tn, "roomIdToCheck:", roomIdToCheck, "isPublicRoom:", isPublicRoom);
             if (In === false && !(roomIdToCheck && typeof roomIdToCheck === "string" && roomIdToCheck.indexOf("PUBLIC-") === 0)) {
                 // Explicitly private - show settings panel
-                console.log("[SETTINGS] Showing settings panel (private room)");
                 la(); // Only call la() for private rooms
                 Pn.classList.add("room");
                 // Show settings panel overlay
                 if (pn) pn.classList.add("show");
             } else {
                 // Public room or unknown - FORCE HIDE settings panel
-                console.log("[SETTINGS] Hiding settings panel (public room or unknown)");
                 Pn.classList.remove("room");
                 // Explicitly hide settings panel overlay - do this multiple times to ensure it's hidden
                 if (pn) {
