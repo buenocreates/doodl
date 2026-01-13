@@ -1388,15 +1388,13 @@
             vn(pn);
             break;
         case F:
-            console.log("[bn] ROUND_START case F, e.data:", e.data, "will display as Round", e.data + 1);
-            // CRITICAL: Call ia() to set "Round X of Y" in game bar when round starts
-            ia(e.data);
-            vn(A);
+            vn(A),
             A.textContent = E("Round $", e.data + 1);
-            // Ensure text is visible immediately
-            if (A) {
-                A.style.display = "block";
-                A.style.visibility = "visible";
+            // Ensure round text in game-bar is visible (it's separate from overlay)
+            if (Un) {
+                Un.style.display = "";
+                Un.style.visibility = "visible";
+                Un.style.opacity = "1";
             }
             break;
         case G:
@@ -1503,6 +1501,7 @@
                 I.querySelector(".winner-text").textContent = E("Nobody won!");
             break;
         case V:
+            console.log("[WORD_CHOICE] Received WORD_CHOICE state, e.data:", e.data);
             // Set current drawer during word choice (for green chat messages)
             // If we're the drawer (e.data.words exists), M is us (x)
             // If we're not the drawer (e.data.id exists), M is the drawer's ID
@@ -1533,19 +1532,10 @@
             }
             if (e.data && e.data.words) {
                 console.log("[WORD_CHOICE] We are the drawer, showing word choices, e.data:", e.data);
-                vn(A);
-                vn(un);
-                // Ensure overlay elements are visible
-                if (A) {
-                    A.style.display = "block";
-                    A.style.visibility = "visible";
-                }
-                if (un) {
-                    un.style.display = "block";
-                    un.style.visibility = "visible";
-                }
-                ce(un);
-                if (An[te.WORDMODE] == ne.COMBINATION) {
+                if (vn(A),
+                vn(un),
+                ce(un),
+                An[te.WORDMODE] == ne.COMBINATION) {
                     A.textContent = E("Choose the first word");
                     for (var S = e.data.words.length / 2, k = [], w = [], C = 0, o = 0; o < S; o++) {
                         var q = $("word", e.data.words[o])
@@ -1582,22 +1572,60 @@
                 }
             } else {
                 // For non-drawers: Show "User is choosing a word" overlay
-                // Reference code: Simple lookup with fallbacks
-                vn(A);
-                // Ensure text element is visible
-                if (A) {
-                    A.style.display = "block";
-                    A.style.visibility = "visible";
+                // ROUND_START already showed "Round 1" in overlay, so we just show the drawer choosing
+                // In bn(), e is the state object: { id: WORD_CHOICE, time: ..., data: { id: drawerId, name: ..., avatar: ... } }
+                // So e.data is { id: drawerId, name: ..., avatar: ... }
+                var drawerId = e.data && e.data.id ? e.data.id : null;
+                var drawerName = e.data && e.data.name ? e.data.name : null;
+                var drawerAvatar = (e.data && e.data.avatar && Array.isArray(e.data.avatar) && e.data.avatar.length >= 3) ? e.data.avatar : null;
+                
+                // ALWAYS try player list first - it's the most reliable source
+                var s = drawerId ? W(drawerId) : null;
+                if (s) {
+                    // Use player list data (always correct and up-to-date)
+                    drawerName = s.name;
+                    drawerAvatar = s.avatar;
+                } else if (drawerName && drawerAvatar) {
+                    // Use server-provided data if player not found in list
+                } else {
+                    // Fallback - should not happen, but if it does, don't show anything
+                    // The server always sends drawer info, so this is an error case
+                    console.error("[WORD_CHOICE] ERROR: No drawer info available!");
+                    return; // Don't show overlay if we don't have drawer info
                 }
-                var s = e.data && e.data.id ? W(e.data.id) : null;
-                var L = s ? s.name : E("User");
-                A.textContent = "";
-                var avatarEl = de(s ? s.avatar : [0, 0, 0, 0], e.data && e.data.id == En);
-                A.appendChild(se("span", void 0, E("$ is choosing a word!", L)));
-                s && pe(avatarEl, Ya(s));
-                avatarEl.style.width = "2em";
-                avatarEl.style.height = "2em";
-                A.appendChild(avatarEl);
+                
+                // Check if overlay is currently showing "Round X" - if so, wait a bit before showing "User is choosing a word"
+                // This ensures "Round 1" is visible first
+                var currentlyShowingRound = A && A.textContent && A.textContent.indexOf("Round") !== -1;
+                if (currentlyShowingRound) {
+                    // Overlay is showing "Round X", wait a bit before showing "User is choosing a word"
+                    setTimeout(function() {
+                        vn(A);
+                        ce(A);
+                        var L = drawerName;
+                        var avatarEl = de(drawerAvatar, drawerId == En);
+                        if (s) {
+                            pe(avatarEl, Ya(s));
+                        }
+                        A.appendChild(se("span", void 0, E("$ is choosing a word!", L)));
+                        avatarEl.style.width = "2em";
+                        avatarEl.style.height = "2em";
+                        A.appendChild(avatarEl);
+                    }, 500); // Small delay to ensure "Round 1" was visible
+                } else {
+                    // Show "User is choosing a word" overlay immediately
+                    vn(A);
+                    ce(A);
+                    var L = drawerName;
+                    var avatarEl = de(drawerAvatar, drawerId == En);
+                    if (s) {
+                        pe(avatarEl, Ya(s));
+                    }
+                    A.appendChild(se("span", void 0, E("$ is choosing a word!", L)));
+                    avatarEl.style.width = "2em";
+                    avatarEl.style.height = "2em";
+                    A.appendChild(avatarEl);
+                }
             }
         }
     }
@@ -1935,78 +1963,21 @@
     function ia(e) {
         var e = (Rn = e) + 1
           , t = An[te.ROUNDS];
-        console.log("[ia] Called with round:", e - 1, "Un exists:", !!Un, "L.id:", L ? L.id : "null");
+        console.log("[ROUND] ia() called with e=", e - 1, "will display Round", e, "of", t, "Un:", Un);
         if (Un) {
             Un.textContent = E("Round $ of $", [e, t]);
-            console.log("[ia] Set text to:", Un.textContent);
-            // Get parent #game-round element
-            var roundParent = Un.parentElement;
-            var gameBar = h.document.querySelector("#game-bar");
-            
-            // CRITICAL: Ensure game-bar is visible and has correct positioning
-            if (gameBar) {
-                gameBar.style.display = "block";
-                gameBar.style.visibility = "visible";
-                gameBar.style.opacity = "1";
-                // Ensure position: relative is set (CSS has it, but ensure it's applied)
-                if (h.getComputedStyle(gameBar).position !== "relative") {
-                    gameBar.style.position = "relative";
-                }
+            console.log("[ROUND] Set text to:", Un.textContent);
+            // Ensure the element is visible
+            if (Un.parentElement) {
+                Un.parentElement.style.display = "";
+                Un.parentElement.style.visibility = "visible";
+                Un.parentElement.style.opacity = "1";
             }
-            
-            // CRITICAL: Ensure #game-round is visible and positioned correctly
-            if (roundParent && roundParent.id === "game-round") {
-                // Force visibility
-                roundParent.style.display = "block";
-                roundParent.style.visibility = "visible";
-                roundParent.style.opacity = "1";
-                // Ensure position: absolute is set (CSS has it)
-                if (h.getComputedStyle(roundParent).position !== "absolute") {
-                    roundParent.style.position = "absolute";
-                }
-                // Ensure left: 60px and top: 14px (CSS has it, but ensure it's applied)
-                var computedParent = h.getComputedStyle(roundParent);
-                if (computedParent.left !== "60px") {
-                    roundParent.style.left = "60px";
-                }
-                if (computedParent.top !== "14px") {
-                    roundParent.style.top = "14px";
-                }
-                var computedParent = h.getComputedStyle(roundParent);
-                var parentRect = roundParent.getBoundingClientRect();
-                console.log("[ia] Round parent - computed left:", computedParent.left, "top:", computedParent.top, "position:", computedParent.position, "display:", computedParent.display, "bounding box left:", parentRect.left);
-            } else {
-                console.error("[ia] Round parent not found or wrong element!");
-            }
-            
-            // CRITICAL: Ensure .text element is visible
-            Un.style.display = "block";
+            Un.style.display = "";
             Un.style.visibility = "visible";
             Un.style.opacity = "1";
-            // Ensure color is set from CSS variable (don't override)
-            var computed = h.getComputedStyle(Un);
-            // If color is transparent or not set, force black (for light theme) or white (for dark theme)
-            if (!computed.color || computed.color === "rgba(0, 0, 0, 0)" || computed.color === "transparent") {
-                // Check game-bar background to determine text color
-                var barBg = h.getComputedStyle(gameBar).backgroundColor;
-                if (barBg && (barBg.includes("255") || barBg === "white" || barBg === "rgb(255, 255, 255)")) {
-                    Un.style.color = "#000000"; // Black text on white background
-                } else {
-                    Un.style.color = "#ffffff"; // White text on dark background
-                }
-            }
-            // Ensure fontSize is set (CSS has 1.4em)
-            if (!computed.fontSize || computed.fontSize === "0px") {
-                Un.style.fontSize = "1.4em";
-            }
-            Un.style.fontWeight = "700";
-            
-            var computed = h.getComputedStyle(Un);
-            var textRect = Un.getBoundingClientRect();
-            console.log("[ia] Final - text:", Un.textContent, "computed color:", computed.color, "fontSize:", computed.fontSize, "display:", computed.display, "bounding box left:", textRect.left, "top:", textRect.top, "width:", textRect.width, "height:", textRect.height);
-            console.log("[ia] Element should be visible at:", "left:", textRect.left, "top:", textRect.top);
         } else {
-            console.error("[ia] Un element (#game-round .text) not found!");
+            console.error("[ROUND] ERROR: Un element not found!");
         }
     }
     function la() {
@@ -2024,61 +1995,9 @@
         if (n = L = e,
         null != fn && (h.cancelAnimationFrame(fn),
         fn = void 0),
-        // CRITICAL: Check ROUND_START FIRST, before checking overlay state
-        n.id == F ? (
-            console.log("[ROUND_START] Received ROUND_START in sa(), n.data:", n.data, "calling ia() to set game bar text, then bn() for overlay"),
-            // Ensure overlay is visible immediately
-            cn.classList.add("show"),
-            cn.style.display = "block",
-            cn.style.visibility = "visible",
-            // Ensure overlay content is visible
-            (dn && (dn.style.display = "block", dn.style.visibility = "visible")),
-            ia(n.data), // Set "Round X of Y" in game bar FIRST - this ensures it's visible
-            // Force visibility immediately
-            (function() {
-                if (Un && Un.parentElement && Un.parentElement.id === "game-round") {
-                    var roundEl = Un.parentElement;
-                    var gameBar = h.document.querySelector("#game-bar");
-                    if (gameBar) {
-                        gameBar.style.display = "block";
-                        gameBar.style.visibility = "visible";
-                        roundEl.style.display = "block";
-                        roundEl.style.visibility = "visible";
-                        Un.style.display = "block";
-                        Un.style.visibility = "visible";
-                        console.log("[ROUND_START] Forced visibility - game-bar display:", h.getComputedStyle(gameBar).display, "round display:", h.getComputedStyle(roundEl).display);
-                    }
-                }
-            })(),
-            bn(n), // Then show "Round X" in overlay
-            // Force overlay to top and visible immediately (no animation delay)
-            (cn.style.top = "0%", cn.style.opacity = "1"),
-            yn({
-                top: 0,
-                opacity: 1
-            }, 600)
-        ) : n.id == j ? (
+        n.id == j ? (
             // Clear waiting dots interval when game starts
             h._waitingDotsInterval && (clearInterval(h._waitingDotsInterval), h._waitingDotsInterval = null),
-            // CRITICAL: Ensure round text stays visible when DRAWING phase starts
-            console.log("[DRAWING] DRAWING state started, ensuring round text is visible"),
-            ia(Rn), // Refresh round text display
-            // Force visibility of round text
-            (function() {
-                if (Un && Un.parentElement && Un.parentElement.id === "game-round") {
-                    var roundEl = Un.parentElement;
-                    var gameBar = h.document.querySelector("#game-bar");
-                    if (gameBar) {
-                        gameBar.style.display = "block";
-                        gameBar.style.visibility = "visible";
-                        roundEl.style.display = "block";
-                        roundEl.style.visibility = "visible";
-                        Un.style.display = "block";
-                        Un.style.visibility = "visible";
-                        console.log("[DRAWING] Round text forced visible for drawing phase");
-                    }
-                }
-            })(),
             yn({
                 top: -100,
                 opacity: 0
@@ -2100,8 +2019,14 @@
                 opacity: 1
             }, 600)
         }) : (cn.classList.add("show"),
-        // Ensure overlay is visible immediately
-        (cn.style.display = "block", cn.style.visibility = "visible", dn && (dn.style.display = "block", dn.style.visibility = "visible")),
+        // For ROUND_START (F), always show "Round X" in overlay first
+        n.id == F ? (
+            bn(n),
+            yn({
+                top: 0,
+                opacity: 1
+            }, 600)
+        ) : (
         // For public rooms in LOBBY state, show waiting overlay instead of settings panel
         // CRITICAL: ALWAYS show waiting screen for LOBBY state UNLESS explicitly private
         // Default to public (waiting screen) if In is not explicitly false
@@ -2129,8 +2054,6 @@
                 if (pn) pn.classList.remove("show");
             })(),
             vn(A),
-            // Ensure text element is visible
-            (A && (A.style.display = "block", A.style.visibility = "visible")),
             (function() {
                 // Check player count to determine message
                 if (w.length >= 8) {
@@ -2140,13 +2063,6 @@
                         h._waitingDotsInterval = null;
                     }
                     A.textContent = E("Starting game...");
-                    // Force visibility
-                    A && (A.style.display = "block", A.style.visibility = "visible");
-                    // Force visibility
-                    if (A) {
-                        A.style.display = "block";
-                        A.style.visibility = "visible";
-                    }
                 } else {
                     // < 8 players - show "Waiting for players..." with animated dots
                     var dots = 0;
@@ -2203,7 +2119,8 @@
         Pn.classList.add("toolbar-hidden"),
         yt(),
         da(!1),
-        e.id == J ? ((function() {
+        e.id == J ? (
+        (function() {
             // CRITICAL: ALWAYS hide settings panel for public rooms
             // Only show settings panel if EXPLICITLY private (In === false AND room doesn't start with PUBLIC-)
             var roomIdToCheck = Tn || "";
@@ -2234,8 +2151,12 @@
                     }, 10);
                 }
             }
-        })()) : Pn.classList.remove("room"), e.id == F && (console.log("[ROUND_START] Received ROUND_START in sa() end, e.data:", e.data, "calling ia()"), ia(e.data), 0 == e.data) && la(), e.id == Z
-        ) {
+        })()) : Pn.classList.remove("room"),
+        e.id == F && (console.log("[ROUND_START] Received round number:", e.data, "will display as Round", e.data + 1),
+        ia(e.data),
+        // Ensure round text is visible
+        Un && (Un.style.display = "", Un.style.visibility = "visible", Un.style.opacity = "1", Un.parentElement && (Un.parentElement.style.display = "", Un.parentElement.style.visibility = "visible")),
+        0 == e.data) && la(), e.id == Z) {
             x != M && ga(e.data.word);
             for (var o = 0; o < e.data.scores.length; o += 3) {
                 var r = e.data.scores[o + 0]
@@ -2252,21 +2173,21 @@
             l ? R.playSound(wn) : R.playSound(kn),
             y(E("The word was '$'", e.data.word), "", f($e), !0)
         } else
-        e.id != j && (N[0].textContent = E("WAITING"),
-        N[0].classList.add("waiting"),
-        N[1].style.display = "none",
-        N[2].style.display = "none"),
-        e.id == j && (M = e.data.id,
+            e.id != j && (N[0].textContent = E("WAITING"),
+            N[0].classList.add("waiting"),
+            N[1].style.display = "none",
+            N[2].style.display = "none");
+        if (e.id == j) {
+            if (M = e.data.id,
             R.playSound(Sn),
             Kt(!0),
             e.data.drawCommands && (v = e.data.drawCommands),
             y(E("$ is drawing now!", W(M).name), "", f(De), !0),
-            !t && (function() {
+            !t)
                 for (o = 0; o < w.length; o++)
                     Fa(w[o], !1),
                     // Clear rate icon when new drawing starts
                     w[o].element.icons && w[o].element.icons[2] && w[o].element.icons[2].classList.remove("visible");
-            })(),
             N[0].classList.remove("waiting"),
             M == x ? (a = e.data.word,
             N[0].textContent = E("DRAW THIS"),
@@ -2317,30 +2238,28 @@
                 }
                 pa(wordData, !1);
             })(),
-            ma(e.data.hints))),
-        e.id != j && (M = -1,
-        (function() {
+            ma(e.data.hints))
+        } else {
+            M = -1;
             for (o = 0; o < w.length; o++)
                 Fa(w[o], !1);
-        })(),
-        // Enable chat input when not in DRAWING state
-        _n[0].disabled = !1,
-        _n[1].disabled = !1,
-        _n[0].removeAttribute("readonly"),
-        _n[1].removeAttribute("readonly")),
-        e.id == X && 0 < e.data.length && (function() {
+            // Enable chat input when not in DRAWING state
+            _n[0].disabled = !1,
+            _n[1].disabled = !1,
+            _n[0].removeAttribute("readonly"),
+            _n[1].removeAttribute("readonly")
+        }
+        if (e.id == X && 0 < e.data.length) {
             for (var s = [], i = 0, o = 0; o < e.data.length; o++) {
                 var c, d = e.data[o][0], u = e.data[o][1];
                 (c = W(d)) && 0 == u && (i = c.score,
                 s.push(c.name))
             }
             1 == s.length ? y(E("$ won with a score of $!", [s[0], i]), "", f(Ae), !0) : 1 < s.length && y(E("$ and $ won with a score of $!", [s.slice(0, -1).join(", "), s[s.length - 1], i]), "", f(Ae), !0)
-        })(),
-        (function() {
-            for (o = 0; o < w.length; o++)
-                Va(w[o], w[o].id == M);
-            Ga()
-        })()
+        }
+        for (o = 0; o < w.length; o++)
+            Va(w[o], w[o].id == M);
+        Ga()
     }
     function ca(e) {
         S && S.connected && L.id == j && (S.emit("data", {
@@ -2575,10 +2494,6 @@
     function Pa(e) {
         var t = e.id
           , n = e.data;
-        // Log STATE packets to debug ROUND_START
-        if (t == qa && n && (n.id == F || n.id == V || n.id == j)) {
-            console.log("[Pa] Received STATE packet - id:", n.id, "data:", n.data, "time:", n.time);
-        }
         switch (t) {
         case Ca:
             aa(n);
