@@ -1503,10 +1503,15 @@
         case V:
             // DEBUG: Log WORD_CHOICE state
             console.log("[WORD_CHOICE] Received state, e.data:", e.data, "has words:", !!(e.data && e.data.words), "has id:", !!(e.data && e.data.id), "x (me):", x);
-            // CRITICAL: If x is undefined, we haven't received GAME_DATA yet - ignore this packet
+            // CRITICAL: If x is undefined, we haven't received GAME_DATA yet - queue this packet
             // This can happen in the first round if WORD_CHOICE arrives before GAME_DATA
             if (x === undefined || x === null) {
-                console.warn("[WORD_CHOICE] Ignoring - player ID (x) not set yet, waiting for GAME_DATA");
+                console.warn("[WORD_CHOICE] Queuing - player ID (x) not set yet, will process after GAME_DATA");
+                // Store the state to process later
+                if (!h._pendingWordChoice) {
+                    h._pendingWordChoice = [];
+                }
+                h._pendingWordChoice.push(e);
                 return; // Don't process WORD_CHOICE until we know who we are
             }
             // Set current drawer during word choice (for green chat messages)
@@ -1875,6 +1880,19 @@
         c.querySelector("#home").style.display = "none",
         c.querySelector("#game").style.display = "flex",
         x = e.me,
+        // CRITICAL: Process any pending WORD_CHOICE states that arrived before GAME_DATA
+        (function() {
+            if (h._pendingWordChoice && h._pendingWordChoice.length > 0) {
+                console.log("[GAME_DATA] Processing", h._pendingWordChoice.length, "pending WORD_CHOICE state(s)");
+                var pendingStates = h._pendingWordChoice;
+                h._pendingWordChoice = []; // Clear the queue
+                // Process each pending WORD_CHOICE state
+                for (var i = 0; i < pendingStates.length; i++) {
+                    console.log("[GAME_DATA] Processing pending WORD_CHOICE:", pendingStates[i]);
+                    bn(pendingStates[i]); // Process the WORD_CHOICE state now that x is set
+                }
+            }
+        })(),
         // CRITICAL: Set In based on isPublic or type
         // true = public, false = private, 0 = public (from type), 1 = private (from type)
         In = e.isPublic !== void 0 ? e.isPublic : (e.type !== void 0 ? (e.type === 0 ? true : false) : true),  // Store isPublic flag (backwards compat with type)
