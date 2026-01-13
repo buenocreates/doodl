@@ -1391,8 +1391,13 @@
             console.log("[bn] ROUND_START case F, e.data:", e.data, "will display as Round", e.data + 1);
             // CRITICAL: Call ia() to set "Round X of Y" in game bar when round starts
             ia(e.data);
-            vn(A),
+            vn(A);
             A.textContent = E("Round $", e.data + 1);
+            // Ensure text is visible immediately
+            if (A) {
+                A.style.display = "block";
+                A.style.visibility = "visible";
+            }
             break;
         case G:
             vn(A),
@@ -1528,10 +1533,19 @@
             }
             if (e.data && e.data.words) {
                 console.log("[WORD_CHOICE] We are the drawer, showing word choices, e.data:", e.data);
-                if (vn(A),
-                vn(un),
-                ce(un),
-                An[te.WORDMODE] == ne.COMBINATION) {
+                vn(A);
+                vn(un);
+                // Ensure overlay elements are visible
+                if (A) {
+                    A.style.display = "block";
+                    A.style.visibility = "visible";
+                }
+                if (un) {
+                    un.style.display = "block";
+                    un.style.visibility = "visible";
+                }
+                ce(un);
+                if (An[te.WORDMODE] == ne.COMBINATION) {
                     A.textContent = E("Choose the first word");
                     for (var S = e.data.words.length / 2, k = [], w = [], C = 0, o = 0; o < S; o++) {
                         var q = $("word", e.data.words[o])
@@ -1570,13 +1584,20 @@
                 // For non-drawers: Show "User is choosing a word" overlay
                 // Reference code: Simple lookup with fallbacks
                 vn(A);
+                // Ensure text element is visible
+                if (A) {
+                    A.style.display = "block";
+                    A.style.visibility = "visible";
+                }
                 var s = e.data && e.data.id ? W(e.data.id) : null;
                 var L = s ? s.name : E("User");
-                L = (A.textContent = "", A.appendChild(se("span", void 0, E("$ is choosing a word!", L))), de(s ? s.avatar : [0, 0, 0, 0], e.data && e.data.id == En));
-                s && pe(L, Ya(s));
-                L.style.width = "2em";
-                L.style.height = "2em";
-                A.appendChild(L);
+                A.textContent = "";
+                var avatarEl = de(s ? s.avatar : [0, 0, 0, 0], e.data && e.data.id == En);
+                A.appendChild(se("span", void 0, E("$ is choosing a word!", L)));
+                s && pe(avatarEl, Ya(s));
+                avatarEl.style.width = "2em";
+                avatarEl.style.height = "2em";
+                A.appendChild(avatarEl);
             }
         }
     }
@@ -2006,8 +2027,15 @@
         // CRITICAL: Check ROUND_START FIRST, before checking overlay state
         n.id == F ? (
             console.log("[ROUND_START] Received ROUND_START in sa(), n.data:", n.data, "calling ia() to set game bar text, then bn() for overlay"),
-            // Ensure overlay is visible
-            cn.classList.add("show"),
+            // Ensure overlay is visible immediately
+            cn.classList.add("show");
+            cn.style.display = "block";
+            cn.style.visibility = "visible";
+            // Ensure overlay content is visible
+            if (dn) {
+                dn.style.display = "block";
+                dn.style.visibility = "visible";
+            }
             ia(n.data), // Set "Round X of Y" in game bar FIRST - this ensures it's visible
             // Force visibility immediately
             (function() {
@@ -2026,6 +2054,9 @@
                 }
             })(),
             bn(n), // Then show "Round X" in overlay
+            // Force overlay to top and visible immediately (no animation delay)
+            cn.style.top = "0%";
+            cn.style.opacity = "1";
             yn({
                 top: 0,
                 opacity: 1
@@ -2073,6 +2104,13 @@
                 opacity: 1
             }, 600)
         }) : (cn.classList.add("show"),
+        // Ensure overlay is visible immediately
+        cn.style.display = "block";
+        cn.style.visibility = "visible";
+        if (dn) {
+            dn.style.display = "block";
+            dn.style.visibility = "visible";
+        }
         // For public rooms in LOBBY state, show waiting overlay instead of settings panel
         // CRITICAL: ALWAYS show waiting screen for LOBBY state UNLESS explicitly private
         // Default to public (waiting screen) if In is not explicitly false
@@ -2099,7 +2137,12 @@
                 // Explicitly hide settings panel overlay
                 if (pn) pn.classList.remove("show");
             })(),
-            vn(A),
+            vn(A);
+            // Ensure text element is visible
+            if (A) {
+                A.style.display = "block";
+                A.style.visibility = "visible";
+            }
             (function() {
                 // Check player count to determine message
                 if (w.length >= 8) {
@@ -2109,6 +2152,11 @@
                         h._waitingDotsInterval = null;
                     }
                     A.textContent = E("Starting game...");
+                    // Force visibility
+                    if (A) {
+                        A.style.display = "block";
+                        A.style.visibility = "visible";
+                    }
                 } else {
                     // < 8 players - show "Waiting for players..." with animated dots
                     var dots = 0;

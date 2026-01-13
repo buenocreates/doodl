@@ -1980,13 +1980,7 @@ io.on('connection', (socket) => {
       return; // Don't proceed if drawer not found
     }
     
-    // Ensure drawer has valid name and avatar
-    if (!drawerPlayer.name || !drawerPlayer.avatar || !Array.isArray(drawerPlayer.avatar) || drawerPlayer.avatar.length < 3) {
-      console.error(`❌ ERROR: Drawer ${room.currentDrawer} has invalid data! name:`, drawerPlayer.name, "avatar:", drawerPlayer.avatar);
-    } else {
-      console.log(`👤 Sending drawer info to non-drawers: ${drawerPlayer.name}, avatar:`, drawerPlayer.avatar);
-    }
-    
+    // Reference code only sends drawer ID, client looks up player from player list
     room.players.forEach(player => {
       if (player.id !== room.currentDrawer) {
         // Always send drawer data, even if invalid (client will handle fallback)
@@ -2004,13 +1998,11 @@ io.on('connection', (socket) => {
             id: GAME_STATE.WORD_CHOICE, // State ID for bn() switch
             time: room.timer,
             data: {
-              id: room.currentDrawer,  // Drawer ID (reference code: W(e.data.id))
-              name: drawerPlayer.name || "Player",
-              avatar: (drawerPlayer.avatar && Array.isArray(drawerPlayer.avatar) && drawerPlayer.avatar.length >= 3) ? drawerPlayer.avatar : [0, 0, 0, 0]
+              id: room.currentDrawer  // Drawer ID only (reference code: W(e.data.id))
             }
           }
         };
-        console.log(`📤 Sending WORD_CHOICE to ${player.id} (non-drawer) with drawer:`, drawerPlayer.name, "avatar:", wordChoiceData.data.data.avatar);
+        console.log(`📤 Sending WORD_CHOICE to ${player.id} (non-drawer) with drawer ID:`, room.currentDrawer);
         io.to(player.id).emit('data', wordChoiceData);
       }
     });
