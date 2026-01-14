@@ -2659,17 +2659,16 @@ async function claimAndDistributeFees() {
     // 3. Your wallet/keypair for claiming
     
     // Example structure (replace with actual implementation):
-    /*
-    const { Connection, PublicKey, Keypair } = require('@solana/web3.js');
-    const connection = new Connection(FEE_DISTRIBUTION_CONFIG.SOLANA_RPC_URL);
-    
-    // Claim fees from Pumpfun token
-    const tokenMint = new PublicKey(FEE_DISTRIBUTION_CONFIG.PUMPFUN_TOKEN_ADDRESS);
-    const creatorKeypair = Keypair.fromSecretKey(/* your secret key */);
-    
-    // Calculate claimable fees (this depends on Pumpfun's fee structure)
-    const claimableFees = await getClaimableFees(tokenMint, creatorKeypair.publicKey);
-    */
+    // TODO: Uncomment and implement when ready:
+    // const { Connection, PublicKey, Keypair } = require('@solana/web3.js');
+    // const connection = new Connection(FEE_DISTRIBUTION_CONFIG.SOLANA_RPC_URL);
+    // 
+    // // Claim fees from Pumpfun token
+    // const tokenMint = new PublicKey(FEE_DISTRIBUTION_CONFIG.PUMPFUN_TOKEN_ADDRESS);
+    // const creatorKeypair = Keypair.fromSecretKey(Buffer.from(process.env.CREATOR_SECRET_KEY, 'base64'));
+    // 
+    // // Calculate claimable fees (this depends on Pumpfun's fee structure)
+    // const claimableFees = await getClaimableFees(tokenMint, creatorKeypair.publicKey);
     
     // For now, using a mock amount - replace with actual fee claiming
     const totalClaimedFees = 0.1; // SOL (replace with actual claimed amount)
