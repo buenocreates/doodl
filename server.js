@@ -2467,10 +2467,13 @@ io.on('connection', (socket) => {
         if (targetPlayer) {
           const playerCount = room.players.length;
           let requiredVotes;
-          if (playerCount <= 3) {
-            requiredVotes = 2;
+          if (playerCount >= 8) {
+            requiredVotes = 5; // 8+ players need 5 votes
+          } else if (playerCount <= 3) {
+            requiredVotes = 2; // 2-3 players need 2 votes
           } else {
-            requiredVotes = 2;
+            // For 4-7 players, use proportional: roughly 60% rounded up
+            requiredVotes = Math.ceil(playerCount * 0.6);
           }
           io.to(room.id).emit('data', {
             id: PACKET.VOTEKICK,
@@ -2487,15 +2490,18 @@ io.on('connection', (socket) => {
       return;
     }
     
-    // Calculate required votes based on lobby size (like doodl)
-    // 2-3 players: need 2 votes minimum
-    // 4+ players: need 2 votes minimum
+    // Calculate required votes based on lobby size
+    // 8 players: need 5 votes
+    // For other sizes, use proportional logic
     const playerCount = room.players.length;
     let requiredVotes;
-    if (playerCount <= 3) {
+    if (playerCount >= 8) {
+      requiredVotes = 5; // 8+ players need 5 votes
+    } else if (playerCount <= 3) {
       requiredVotes = 2; // 2-3 players need 2 votes
     } else {
-      requiredVotes = 2; // 4+ players need 2 votes minimum
+      // For 4-7 players, use proportional: roughly 60% rounded up
+      requiredVotes = Math.ceil(playerCount * 0.6);
     }
     
     // Count votes for this target (only non-expired votes)
