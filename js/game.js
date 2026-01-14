@@ -1501,22 +1501,17 @@
                 I.querySelector(".winner-text").textContent = E("Nobody won!");
             break;
         case V:
-            // DEBUG: Log WORD_CHOICE state - check x value directly
             // CRITICAL: x might be undefined due to closure/timing, so check it fresh each time
             var currentX = x; // Capture x value at this moment
-            console.log("[WORD_CHOICE] Received state, e.data:", e.data, "has words:", !!(e.data && e.data.words), "has id:", !!(e.data && e.data.id), "x (me):", currentX, "typeof x:", typeof currentX);
             // CRITICAL: Check if this is the drawer's packet (has words) - process immediately if x is set
             // If it's the non-drawer packet and x is not set, queue it
             var isDrawerPacket = e.data && e.data.words && Array.isArray(e.data.words) && e.data.words.length > 0;
             if (isDrawerPacket && currentX && currentX !== 0 && currentX !== undefined && currentX !== null) {
-                // Drawer packet and x is set - process immediately
-                console.log("[WORD_CHOICE] Drawer packet received, x is set, processing immediately");
+                // Drawer packet and x is set - process immediately (works for all rounds)
                 // Continue to process below
             } else if (currentX === undefined || currentX === null || currentX === 0) {
-                // x not set yet - queue this packet
-                console.warn("[WORD_CHOICE] Queuing - player ID (x) not set yet (value:", currentX, "), will process after GAME_DATA");
+                // x not set yet - queue this packet (can happen in any round if WORD_CHOICE arrives before GAME_DATA)
                 _pendingWordChoice.push(e);
-                console.log("[WORD_CHOICE] Queue now has", _pendingWordChoice.length, "items");
                 // Also set up a check to process this after a delay in case GAME_DATA already arrived
                 // Check multiple times to catch when x gets set
                 var checkAttempts = 0;
@@ -1525,38 +1520,30 @@
                     checkAttempts++;
                     var checkX = x; // Check x fresh each time
                     if (checkX && checkX !== 0 && checkX !== undefined && _pendingWordChoice && _pendingWordChoice.length > 0) {
-                        console.log("[WORD_CHOICE] Delayed check #" + checkAttempts + " - x is now set to:", checkX, "processing queued states");
                         var pendingStates = _pendingWordChoice.slice();
                         _pendingWordChoice.length = 0;
                         clearInterval(checkInterval); // Stop checking
                         for (var i = 0; i < pendingStates.length; i++) {
-                            console.log("[WORD_CHOICE] Processing delayed WORD_CHOICE:", pendingStates[i], "x is:", checkX);
                             sa(pendingStates[i], !0); // Use sa() to ensure overlay animation happens
                         }
                     } else if (checkAttempts >= maxAttempts) {
-                        console.warn("[WORD_CHOICE] Stopped checking after", maxAttempts, "attempts, x is still:", checkX);
                         clearInterval(checkInterval);
                     }
                 }, 200);
                 return; // Don't process WORD_CHOICE until we know who we are
             } else if (!isDrawerPacket && e.data && e.data.id) {
-                // Non-drawer packet and x is set - process normally
-                console.log("[WORD_CHOICE] Non-drawer packet received, x is set, processing normally");
+                // Non-drawer packet and x is set - process normally (works for all rounds)
                 // Continue to process below
             } else {
-                console.warn("[WORD_CHOICE] Unexpected state - isDrawerPacket:", isDrawerPacket, "x:", currentX, "e.data:", e.data);
-                return;
+                return; // Invalid packet, ignore it
             }
             // Set current drawer during word choice (for green chat messages)
             // CRITICAL: Use currentX (captured earlier) instead of x to avoid shadowing issues
             if (e.data && e.data.words && Array.isArray(e.data.words) && e.data.words.length > 0) {
                 M = currentX; // We're the drawer - use captured x value
-                console.log("[WORD_CHOICE] We are the drawer, showing word choices, M set to:", M);
             } else if (e.data && e.data.id) {
                 M = e.data.id; // Set M to the drawer's ID
-                console.log("[WORD_CHOICE] We are NOT the drawer, drawer ID:", e.data.id);
             } else {
-                console.warn("[WORD_CHOICE] Invalid packet - no words and no drawer ID, e.data:", e.data);
                 return; // Invalid packet, ignore it
             }
             if (e.data && e.data.words) {
@@ -1577,15 +1564,13 @@
                 _n[1].removeAttribute("readonly");
             }
             if (e.data && e.data.words) {
-                console.log("[WORD_CHOICE] Showing word choices, words:", e.data.words, "wordMode:", An[te.WORDMODE], "A:", A, "un:", un);
                 // CRITICAL: Clear text overlay first, then show words
-                // This ensures "Round X" text doesn't interfere
+                // This ensures "Round X" text doesn't interfere (works for all rounds)
                 ce(A);
                 vn(A);
                 vn(un);
                 ce(un);
                 if (An[te.WORDMODE] == ne.COMBINATION) {
-                    console.log("[WORD_CHOICE] Combination mode, creating word pairs");
                     A.textContent = E("Choose the first word");
                     for (var S = e.data.words.length / 2, k = [], w = [], C = 0, o = 0; o < S; o++) {
                         var q = $("word", e.data.words[o])
@@ -1610,18 +1595,15 @@
                         un.appendChild(x)
                     }
                 } else {
-                    console.log("[WORD_CHOICE] Normal mode, creating", e.data.words.length, "word buttons");
                     A.textContent = E("Choose a word");
                     for (o = 0; o < e.data.words.length; o++) {
                         var M = $("word", e.data.words[o]);
                         M.index = o,
                         D(M, "click", function() {
-                            console.log("[WORD_CHOICE] Word clicked, index:", this.index);
                             ha(this.index)
                         }),
                         un.appendChild(M)
                     }
-                    console.log("[WORD_CHOICE] Words added to container, un.children.length:", un.children.length);
                 }
             } else {
                 vn(A);
@@ -1905,7 +1887,6 @@
         })
     }
     function aa(e) {
-        console.log("[GAME_DATA] Received, me:", e.me, "pending WORD_CHOICE count:", _pendingWordChoice ? _pendingWordChoice.length : 0);
         R.playSound(Cn),
         Tt(Xe, !0),
         At(12),
@@ -1916,7 +1897,6 @@
         c.querySelector("#home").style.display = "none",
         c.querySelector("#game").style.display = "flex",
         x = e.me,
-        console.log("[GAME_DATA] Set x to:", x),
         // CRITICAL: Process any pending WORD_CHOICE states that arrived before GAME_DATA
         (function() {
             // Also set up a periodic check to process any WORD_CHOICE that arrives after GAME_DATA
@@ -1925,13 +1905,10 @@
                 // x is now set, check for pending states immediately and also set up periodic check
                 var processPending = function() {
                     if (_pendingWordChoice && _pendingWordChoice.length > 0 && x && x !== 0) {
-                        console.log("[GAME_DATA] Processing", _pendingWordChoice.length, "pending WORD_CHOICE state(s), x is:", x);
                         var pendingStates = _pendingWordChoice.slice(); // Copy the array
                         _pendingWordChoice.length = 0; // Clear the queue
                         setTimeout(function() {
-                            console.log("[GAME_DATA] setTimeout callback - processing", pendingStates.length, "pending states, x is:", x);
                             for (var i = 0; i < pendingStates.length; i++) {
-                                console.log("[GAME_DATA] Processing pending WORD_CHOICE:", pendingStates[i], "x is now:", x);
                                 sa(pendingStates[i], !0); // Use sa() to ensure overlay animation happens
                             }
                         }, 100);
@@ -1941,22 +1918,18 @@
                 };
                 
                 // Process immediately if there are pending states
-                if (!processPending()) {
-                    console.log("[GAME_DATA] No pending WORD_CHOICE states to process, queue length:", _pendingWordChoice ? _pendingWordChoice.length : 0);
-                }
-                // Set up periodic check for states that arrive after this GAME_DATA
+                processPending();
+                // Set up periodic check for states that arrive after this GAME_DATA (works for all rounds)
                 // Check multiple times to catch WORD_CHOICE that arrives late
                 var checkCount = 0;
                 var maxChecks = 10; // Check 10 times over 2 seconds
                 var checkInterval = setInterval(function() {
                     checkCount++;
                     if (_pendingWordChoice && _pendingWordChoice.length > 0 && x && x !== 0) {
-                        console.log("[GAME_DATA] Periodic check #" + checkCount + " found", _pendingWordChoice.length, "pending states, processing now, x is:", x);
                         if (processPending()) {
                             clearInterval(checkInterval); // Stop checking once we process
                         }
                     } else if (checkCount >= maxChecks) {
-                        console.log("[GAME_DATA] Stopping periodic check after", maxChecks, "attempts");
                         clearInterval(checkInterval);
                     }
                 }, 200);
