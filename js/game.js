@@ -3129,6 +3129,11 @@
         }))
     }),
     D(jn, "click", function() {
+        // Check wallet BEFORE showing loading screen
+        if (!h.userWalletAddress) {
+            showWalletRequiredNotification();
+            return;
+        }
         Nn || (xe(),
         Jn(!0),
         ta(function() {

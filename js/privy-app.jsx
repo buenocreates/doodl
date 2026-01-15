@@ -38,17 +38,17 @@ function WalletConnectButton() {
     }
   }, [ready, authenticated, wallets]);
   
-  const handleConnect = () => {
+  const handleConnect = async () => {
     try {
-      login();
+      // Try to login - this will show Privy's modal
+      await login();
     } catch (error) {
       console.error('Error connecting wallet:', error);
-      // Show error notification
+      // Error will be shown by Privy's UI, but we can also show our notification
       if (window.showWalletRequiredNotification) {
-        // Temporarily show error message
         const notification = document.createElement('div');
         notification.style.cssText = 'position: fixed; bottom: 20px; right: 20px; background: #dc3545; color: #fff; padding: 15px 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); z-index: 10000; max-width: 300px; font-family: Nunito, sans-serif; font-weight: 600;';
-        notification.innerHTML = '<div style="font-size: 16px; font-weight: 700; margin-bottom: 5px;">Connection Error</div><div style="font-size: 14px;">Please try again or use email login</div>';
+        notification.innerHTML = '<div style="position: absolute; top: 5px; right: 5px; background: transparent; border: 1px solid rgba(255,255,255,0.5); color: #fff; width: 24px; height: 24px; border-radius: 4px; cursor: pointer; font-size: 18px; line-height: 1; display: flex; align-items: center; justify-content: center; padding: 0;" onclick="this.parentElement.remove()">×</div><div style="font-size: 16px; font-weight: 700; margin-bottom: 5px;">Connection Error</div><div style="font-size: 14px;">Please try email login or check your wallet connection</div>';
         document.body.appendChild(notification);
         setTimeout(() => notification.remove(), 5000);
       }
