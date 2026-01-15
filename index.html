@@ -921,19 +921,7 @@
 </script>
         <!-- Privy React App - Load bundled version -->
         <script src="/dist/privy-app.js"></script>
-        <script>
-            // Initialize Privy app when DOM is ready
-            if (document.readyState === 'loading') {
-                document.addEventListener('DOMContentLoaded', function() {
-                    if (window.PrivyApp && window.PrivyApp.initPrivyApp) {
-                        window.PrivyApp.initPrivyApp();
-                    }
-                });
-            } else {
-                if (window.PrivyApp && window.PrivyApp.initPrivyApp) {
-                    window.PrivyApp.initPrivyApp();
-                }
-            }
+        <!-- Note: Privy app auto-initializes in privy-app.js, no need to call initPrivyApp here -->
             
             // Listen for wallet connection events
             window.addEventListener('privy-wallet-connected', function(e) {

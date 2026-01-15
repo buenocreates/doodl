@@ -2,6 +2,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { PrivyProvider, usePrivy, useWallets } from '@privy-io/react-auth';
+import { toSolanaWalletConnectors } from '@privy-io/react-auth/solana';
 
 // Get Privy App ID from server
 let PRIVY_APP_ID = 'cmkdyx5cg02hvlb0cexfoj8sj';
@@ -89,11 +90,17 @@ function PrivyApp() {
         appearance: {
           theme: 'dark',
           accentColor: '#9945FF',
-          logo: '/img/doodllogo.gif'
+          logo: '/img/doodllogo.gif',
+          walletChainType: 'solana-only'
         },
         embeddedWallets: {
           solana: {
             createOnLogin: 'users-without-wallets'
+          }
+        },
+        externalWallets: {
+          solana: {
+            connectors: toSolanaWalletConnectors(['phantom', 'solflare'])
           }
         }
       }}
@@ -103,10 +110,16 @@ function PrivyApp() {
   );
 }
 
-// Initialize React app
+// Initialize React app (only once)
+let privyAppInitialized = false;
 function initPrivyApp() {
+  if (privyAppInitialized) {
+    return; // Prevent duplicate initialization
+  }
+  
   const container = document.getElementById('wallet-connect-header');
-  if (container) {
+  if (container && !container.hasChildNodes()) {
+    privyAppInitialized = true;
     const root = ReactDOM.createRoot(container);
     root.render(React.createElement(PrivyApp));
   }
@@ -118,10 +131,12 @@ if (typeof window !== 'undefined') {
     initPrivyApp: initPrivyApp
   };
   
-  // Auto-init when DOM is ready
+  // Auto-init when DOM is ready (only once)
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initPrivyApp);
+    document.addEventListener('DOMContentLoaded', function() {
+      setTimeout(initPrivyApp, 100); // Small delay to ensure DOM is ready
+    });
   } else {
-    initPrivyApp();
+    setTimeout(initPrivyApp, 100);
   }
 }
