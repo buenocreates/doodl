@@ -40,7 +40,18 @@ app.use(express.static(__dirname, {
     if (path.endsWith('.ogg')) {
       res.setHeader('Content-Type', 'audio/ogg');
     }
+    // Set correct MIME type for JavaScript files
+    if (path.endsWith('.js')) {
+      res.setHeader('Content-Type', 'application/javascript');
+    }
   }
+}));
+
+// Serve Vite build output
+app.use('/dist', express.static(path.join(__dirname, 'dist'), {
+  maxAge: '1d',
+  etag: true,
+  lastModified: true
 }));
 
 // Serve favicon
