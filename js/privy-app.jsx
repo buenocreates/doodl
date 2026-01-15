@@ -7,13 +7,19 @@ import { toSolanaWalletConnectors } from '@privy-io/react-auth/solana';
 // Get Privy App ID from server
 let PRIVY_APP_ID = 'cmkdyx5cg02hvlb0cexfoj8sj';
 
+// Log current domain for debugging
+console.log('Current origin:', window.location.origin);
+console.log('Current hostname:', window.location.hostname);
+
 // Fetch from server on init
 fetch('/api/privy-config')
   .then(res => res.json())
   .then(config => {
     PRIVY_APP_ID = config.appId;
+    console.log('Privy App ID loaded:', PRIVY_APP_ID);
   })
-  .catch(() => {
+  .catch((err) => {
+    console.warn('Failed to fetch Privy config, using default:', err);
     // Use default if fetch fails
   });
 
@@ -40,14 +46,25 @@ function WalletConnectButton() {
   
   const handleConnect = async () => {
     try {
+      console.log('Attempting to login with Privy...');
+      console.log('Current origin:', window.location.origin);
+      console.log('Privy App ID:', PRIVY_APP_ID);
+      
       // Try to login - this will show Privy's modal
       await login();
+      console.log('Login successful');
     } catch (error) {
       console.error('Error connecting wallet:', error);
+      console.error('Error type:', error?.constructor?.name);
+      console.error('Error message:', error?.message);
+      console.error('Error code:', error?.code);
+      console.error('Full error:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
+      
       // Error will be shown by Privy's UI, but we can also show our notification
       if (window.showWalletRequiredNotification) {
         const notification = document.createElement('div');
         notification.style.cssText = 'position: fixed; bottom: 20px; right: 20px; background: #dc3545; color: #fff; padding: 15px 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); z-index: 10000; max-width: 300px; font-family: Nunito, sans-serif; font-weight: 600;';
+        const errorMsg = error?.message || 'Unknown error';
         notification.innerHTML = '<div style="position: absolute; top: 5px; right: 5px; background: transparent; border: 1px solid rgba(255,255,255,0.5); color: #fff; width: 24px; height: 24px; border-radius: 4px; cursor: pointer; font-size: 18px; line-height: 1; display: flex; align-items: center; justify-content: center; padding: 0;" onclick="this.parentElement.remove()">×</div><div style="font-size: 16px; font-weight: 700; margin-bottom: 5px;">Connection Error</div><div style="font-size: 14px;">Please try email login or check your wallet connection</div>';
         document.body.appendChild(notification);
         setTimeout(() => notification.remove(), 5000);
@@ -95,6 +112,26 @@ function WalletConnectButton() {
 
 // Main Privy App Component
 function PrivyApp() {
+  // Add error handler for Privy errors
+  React.useEffect(() => {
+    // Listen for any unhandled Privy errors
+    const errorHandler = (event) => {
+      console.error('Privy Error:', event.error || event);
+      if (event.error && event.error.message) {
+        console.error('Error message:', event.error.message);
+        console.error('Error stack:', event.error.stack);
+      }
+    };
+    
+    window.addEventListener('error', errorHandler);
+    window.addEventListener('unhandledrejection', errorHandler);
+    
+    return () => {
+      window.removeEventListener('error', errorHandler);
+      window.removeEventListener('unhandledrejection', errorHandler);
+    };
+  }, []);
+  
   return (
     <PrivyProvider
       appId={PRIVY_APP_ID}
@@ -115,6 +152,16 @@ function PrivyApp() {
           solana: {
             connectors: toSolanaWalletConnectors(['phantom', 'solflare'])
           }
+        },
+        // Add error handling
+        onError: (error) => {
+          console.error('Privy Provider Error:', error);
+          console.error('Error details:', {
+            message: error?.message,
+            code: error?.code,
+            name: error?.name,
+            stack: error?.stack
+          });
         }
       }}
     >
