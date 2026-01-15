@@ -79,20 +79,8 @@
         <link href="https://fonts.googleapis.com/css2?family=Inconsolata&amp;display=swap" rel="stylesheet">
         <link href="https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,400;0,600;0,700;0,800;1,400&amp;display=swap" rel="stylesheet">
         <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-        <!-- Privy SDK - Load from official CDN (optional, will work without it) -->
-        <script>
-            // Try to load Privy SDK, but don't fail if it doesn't load
-            (function() {
-                var script = document.createElement('script');
-                script.src = 'https://sdk.privy.io/v1/privy.js';
-                script.async = true;
-                script.onerror = function() {
-                    console.warn('Privy SDK failed to load. Wallet features will be limited.');
-                    window.Privy = null; // Mark as unavailable
-                };
-                document.head.appendChild(script);
-            })();
-        </script>
+        <!-- Privy SDK - Using manual wallet entry for now (Privy CDN not available) -->
+        <!-- To use Privy, install via npm: npm install @privy-io/react-auth -->
     </head>
     <body translate="no">
         <div id="preroll"></div>
@@ -942,63 +930,19 @@
         <script>
             // Privy initialization and wallet connection
             (function() {
-                // Initialize Privy - Get App ID from server endpoint (secure)
-                let privy = null;
+                // Wallet connection using manual entry (Privy SDK not available via CDN)
                 let walletAddress = null;
-                let PRIVY_APP_ID = null;
                 
-                // Fetch Privy App ID from server (secure, not exposed in client code)
-                async function fetchPrivyConfig() {
-                    try {
-                        const response = await fetch('/api/privy-config');
-                        const config = await response.json();
-                        PRIVY_APP_ID = config.appId;
-                        initPrivy();
-                    } catch (error) {
-                        console.error('Error fetching Privy config:', error);
-                        // Fallback (not recommended for production)
-                        PRIVY_APP_ID = 'cmkdyx5cg02hvlb0cexfoj8sj';
-                        initPrivy();
-                    }
-                }
-                
-                // Wait for Privy SDK to load
-                function initPrivy() {
-                    if (!PRIVY_APP_ID) {
-                        console.error('Privy App ID not loaded');
-                        return;
-                    }
-                    
-                    if (typeof Privy === 'undefined') {
-                        console.error('Privy SDK not loaded');
-                        return;
-                    }
-                    
-                    try {
-                        privy = new Privy({
-                            appId: PRIVY_APP_ID,
-                            config: {
-                                loginMethods: ['wallet', 'email'],
-                                appearance: {
-                                    theme: 'dark',
-                                    accentColor: '#9945FF'
-                                }
-                            }
-                        });
-                        
-                        // Check if user is already authenticated
-                        privy.ready().then(() => {
-                            const user = privy.getUser();
-                            if (user && user.wallet) {
-                                walletAddress = user.wallet.address;
-                                updateWalletUI(true);
-                            } else if (user && user.email) {
-                                // User logged in with email, show wallet address input
-                                showEmailWalletInput();
-                            }
-                        });
-                    } catch (error) {
-                        console.error('Error initializing Privy:', error);
+                // Check for saved wallet address
+                function initWallet() {
+                    const savedAddress = localStorage.getItem('userWalletAddress');
+                    if (savedAddress) {
+                        walletAddress = savedAddress;
+                        window.userWalletAddress = savedAddress;
+                        updateWalletUI(true);
+                    } else {
+                        // Show manual wallet input
+                        showEmailWalletInput();
                     }
                 }
                 
@@ -1027,90 +971,59 @@
                 }
                 
                 function showEmailWalletInput() {
-                    // For email users, show input to enter wallet address
+                    // Show input to enter wallet address manually
+                    const connectBtn = document.getElementById('privy-connect-button');
                     const walletInfo = document.getElementById('wallet-info');
                     const walletAddressDiv = document.getElementById('wallet-address');
+                    
+                    connectBtn.style.display = 'none';
                     walletInfo.style.display = 'block';
-                    walletAddressDiv.innerHTML = '<input type="text" id="email-wallet-input" placeholder="Enter your Solana wallet address" style="padding: 8px; border-radius: 5px; border: 1px solid #ccc; width: 100%; max-width: 300px; margin: 5px auto; display: block;"><button id="save-wallet-btn" style="margin-top: 5px; padding: 5px 15px; background: #9945FF; border: none; border-radius: 5px; color: #fff; cursor: pointer;">Save Wallet</button>';
+                    walletAddressDiv.innerHTML = '<div style="margin-bottom: 10px; color: #fff; font-size: 0.9em;">Enter your Solana wallet address to receive rewards:</div><input type="text" id="email-wallet-input" placeholder="Enter your Solana wallet address" style="padding: 8px; border-radius: 5px; border: 1px solid #ccc; width: 100%; max-width: 300px; margin: 5px auto; display: block; background: #fff; color: #000;"><button id="save-wallet-btn" style="margin-top: 10px; padding: 8px 20px; background: #9945FF; border: none; border-radius: 5px; color: #fff; cursor: pointer; font-weight: 700;">Connect Wallet</button>';
+                    
+                    // Remove old event listener if exists
+                    const oldBtn = document.getElementById('save-wallet-btn');
+                    if (oldBtn) {
+                        oldBtn.replaceWith(oldBtn.cloneNode(true));
+                    }
                     
                     document.getElementById('save-wallet-btn').addEventListener('click', function() {
                         const input = document.getElementById('email-wallet-input');
                         const address = input.value.trim();
                         if (address && address.length > 0) {
-                            walletAddress = address;
-                            window.userWalletAddress = address;
-                            // Save to Privy user metadata or localStorage
-                            if (privy) {
-                                privy.updateUserMetadata({ walletAddress: address });
+                            // Basic validation - Solana addresses are 32-44 characters
+                            if (address.length >= 32 && address.length <= 44) {
+                                walletAddress = address;
+                                window.userWalletAddress = address;
+                                localStorage.setItem('userWalletAddress', address);
+                                updateWalletUI(true);
+                            } else {
+                                alert('Please enter a valid Solana wallet address (32-44 characters)');
                             }
-                            localStorage.setItem('userWalletAddress', address);
-                            updateWalletUI(true);
+                        } else {
+                            alert('Please enter your wallet address');
                         }
                     });
                 }
                 
-                // Connect button handler
-                document.getElementById('privy-connect-button').addEventListener('click', async function() {
-                    if (!privy) {
-                        console.error('Privy not initialized');
-                        return;
-                    }
-                    
-                    try {
-                        await privy.login();
-                        const user = privy.getUser();
-                        if (user && user.wallet) {
-                            walletAddress = user.wallet.address;
-                            updateWalletUI(true);
-                        } else if (user && user.email) {
-                            // Check if wallet address was previously saved
-                            const savedAddress = localStorage.getItem('userWalletAddress');
-                            if (savedAddress) {
-                                walletAddress = savedAddress;
-                                updateWalletUI(true);
-                            } else {
-                                showEmailWalletInput();
-                            }
-                        }
-                    } catch (error) {
-                        console.error('Error connecting wallet:', error);
-                    }
+                // Connect button handler (shows manual wallet input)
+                document.getElementById('privy-connect-button').addEventListener('click', function() {
+                    showEmailWalletInput();
                 });
                 
                 // Disconnect button handler
-                document.getElementById('privy-disconnect-button').addEventListener('click', async function() {
-                    if (privy) {
-                        await privy.logout();
-                    }
+                document.getElementById('privy-disconnect-button').addEventListener('click', function() {
                     walletAddress = null;
                     window.userWalletAddress = null;
                     localStorage.removeItem('userWalletAddress');
                     updateWalletUI(false);
+                    showEmailWalletInput(); // Show input again
                 });
                 
-                // Initialize when Privy SDK loads (or allow manual wallet entry if it doesn't)
-                var privyLoadAttempts = 0;
-                var maxPrivyLoadAttempts = 20; // 10 seconds max
-                
-                function waitForPrivy() {
-                    privyLoadAttempts++;
-                    if (typeof Privy !== 'undefined' && Privy !== null) {
-                        fetchPrivyConfig();
-                    } else if (privyLoadAttempts < maxPrivyLoadAttempts) {
-                        // Try again after a short delay
-                        setTimeout(waitForPrivy, 500);
-                    } else {
-                        console.warn('Privy SDK not available. Using manual wallet entry mode.');
-                        // Show manual wallet input as fallback
-                        showEmailWalletInput();
-                    }
-                }
-                
-                // Start waiting for Privy SDK
+                // Initialize wallet on page load
                 if (document.readyState === 'loading') {
-                    document.addEventListener('DOMContentLoaded', waitForPrivy);
+                    document.addEventListener('DOMContentLoaded', initWallet);
                 } else {
-                    waitForPrivy();
+                    initWallet();
                 }
             })();
         </script>
