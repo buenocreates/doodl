@@ -103,38 +103,76 @@ function WalletConnectButton() {
   
   const handleConnect = async () => {
     try {
-      console.log('Attempting to login with Privy...');
+      console.log('🔌 Attempting to connect wallet...');
       console.log('Current origin:', window.location.origin);
       console.log('Privy App ID:', PRIVY_APP_ID);
+      console.log('Current authenticated state:', authenticated);
+      
+      // If already authenticated, logout first to clear any stale sessions
+      if (authenticated) {
+        console.log('⚠️ User already authenticated, logging out first to clear session...');
+        try {
+          await logout();
+          // Wait a moment for logout to complete
+          await new Promise(resolve => setTimeout(resolve, 500));
+        } catch (logoutError) {
+          console.warn('Logout error (may be fine):', logoutError);
+        }
+      }
       
       // Try to login - this will show Privy's modal with wallet options
       // Users can choose to connect external wallet (Phantom/Solflare) or use email
-      await login();
-      console.log('Login call completed');
+      console.log('📱 Opening Privy login modal...');
+      const loginPromise = login();
+      
+      // Set a timeout to catch if login hangs
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Login timeout after 30 seconds')), 30000)
+      );
+      
+      await Promise.race([loginPromise, timeoutPromise]);
+      console.log('✅ Login modal closed');
       
       // Wait a bit to see if authentication completes
-      setTimeout(() => {
-        console.log('After login - authenticated:', authenticated, 'wallets:', wallets.length, 'solanaWallets:', solanaWallets.length);
-        const solanaWallet = wallets.find(w => w.chainType === 'solana') || solanaWallets[0];
-        if (solanaWallet) {
-          console.log('✅ Solana wallet connected successfully:', solanaWallet.address);
-        } else if (authenticated && wallets.length > 0) {
-          console.warn('⚠️ User authenticated but no Solana wallet. Available wallets:', wallets.map(w => w.walletClientType));
-        } else if (!authenticated) {
-          console.warn('⚠️ Login completed but user not authenticated');
-        }
-      }, 2000);
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      console.log('After login - authenticated:', authenticated, 'wallets:', wallets.length, 'solanaWallets:', solanaWallets.length);
+      const solanaWallet = wallets.find(w => w.chainType === 'solana') || solanaWallets[0];
+      if (solanaWallet) {
+        console.log('✅ Solana wallet connected successfully:', solanaWallet.address);
+      } else if (authenticated && wallets.length > 0) {
+        console.warn('⚠️ User authenticated but no Solana wallet. Available wallets:', wallets.map(w => w.walletClientType));
+      } else if (!authenticated) {
+        console.warn('⚠️ Login completed but user not authenticated');
+      }
       
     } catch (error) {
       console.error('❌ Error connecting wallet:', error);
       console.error('Error type:', error?.constructor?.name);
       console.error('Error message:', error?.message);
       console.error('Error code:', error?.code);
+      console.error('Error name:', error?.name);
       console.error('Error stack:', error?.stack);
+      
+      // Try to get more details from the error
+      if (error?.response) {
+        console.error('Error response:', error.response);
+      }
+      if (error?.data) {
+        console.error('Error data:', error.data);
+      }
       
       // Try to stringify error for more details
       try {
-        console.error('Full error:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
+        const errorDetails = {};
+        Object.getOwnPropertyNames(error).forEach(key => {
+          try {
+            errorDetails[key] = error[key];
+          } catch (e) {
+            errorDetails[key] = '[Unable to serialize]';
+          }
+        });
+        console.error('Full error details:', JSON.stringify(errorDetails, null, 2));
       } catch (e) {
         console.error('Could not stringify error');
       }
@@ -142,7 +180,8 @@ function WalletConnectButton() {
       // Show user-friendly error notification
       const notification = document.createElement('div');
       notification.style.cssText = 'position: fixed; bottom: 20px; right: 20px; background: #dc3545; color: #fff; padding: 15px 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); z-index: 10000; max-width: 300px; font-family: Nunito, sans-serif; font-weight: 600;';
-      notification.innerHTML = '<div style="position: absolute; top: 5px; right: 5px; background: transparent; border: 1px solid rgba(255,255,255,0.5); color: #fff; width: 24px; height: 24px; border-radius: 4px; cursor: pointer; font-size: 18px; line-height: 1; display: flex; align-items: center; justify-content: center; padding: 0;" onclick="this.parentElement.remove()">×</div><div style="font-size: 16px; font-weight: 700; margin-bottom: 5px;">Connection Error</div><div style="font-size: 14px;">Please try again or use email login</div>';
+      const errorMsg = error?.message || 'Unknown error';
+      notification.innerHTML = `<div style="position: absolute; top: 5px; right: 5px; background: transparent; border: 1px solid rgba(255,255,255,0.5); color: #fff; width: 24px; height: 24px; border-radius: 4px; cursor: pointer; font-size: 18px; line-height: 1; display: flex; align-items: center; justify-content: center; padding: 0;" onclick="this.parentElement.remove()">×</div><div style="font-size: 16px; font-weight: 700; margin-bottom: 5px;">Connection Error</div><div style="font-size: 14px;">${errorMsg}</div>`;
       document.body.appendChild(notification);
       setTimeout(() => notification.remove(), 5000);
     }
@@ -214,12 +253,51 @@ function WalletConnectButton() {
 function PrivyApp() {
   // Add error handler for Privy errors
   React.useEffect(() => {
+    // Intercept console.error to catch Privy's "Error authenticating session"
+    const originalConsoleError = console.error;
+    console.error = function(...args) {
+      const errorMessage = args.join(' ');
+      
+      // Check if this is the "Error authenticating session" error
+      if (errorMessage.includes('Error authenticating session') || 
+          errorMessage.includes('authenticating session')) {
+        console.warn('⚠️ Caught Privy authentication session error. This may be a non-critical error.');
+        console.warn('Error details:', args);
+        
+        // Try to extract more information
+        if (args[0] && typeof args[0] === 'object') {
+          console.warn('Error object:', {
+            message: args[0].message,
+            name: args[0].name,
+            stack: args[0].stack,
+            ...args[0]
+          });
+        }
+        
+        // Check if wallet is still connected despite the error
+        setTimeout(() => {
+          const solanaWallets = window.solanaWallets || [];
+          if (solanaWallets.length > 0 || window.userWalletAddress) {
+            console.log('✅ Wallet is still connected despite authentication error:', window.userWalletAddress);
+          }
+        }, 1000);
+      }
+      
+      // Call original console.error
+      originalConsoleError.apply(console, args);
+    };
+    
     // Listen for any unhandled Privy errors
     const errorHandler = (event) => {
-      console.error('Privy Error:', event.error || event);
-      if (event.error && event.error.message) {
-        console.error('Error message:', event.error.message);
-        console.error('Error stack:', event.error.stack);
+      const error = event.error || event.reason || event;
+      if (error && error.message && error.message.includes('authenticating session')) {
+        console.warn('⚠️ Caught authentication session error in error handler:', error);
+      } else {
+        console.error('Privy Error:', error);
+        if (error && error.message) {
+          console.error('Error message:', error.message);
+          console.error('Error stack:', error.stack);
+        }
       }
     };
     
@@ -227,6 +305,7 @@ function PrivyApp() {
     window.addEventListener('unhandledrejection', errorHandler);
     
     return () => {
+      console.error = originalConsoleError;
       window.removeEventListener('error', errorHandler);
       window.removeEventListener('unhandledrejection', errorHandler);
     };
@@ -255,13 +334,28 @@ function PrivyApp() {
         },
         // Add error handling
         onError: (error) => {
-          console.error('Privy Provider Error:', error);
+          console.error('🚨 Privy Provider Error:', error);
           console.error('Error details:', {
             message: error?.message,
             code: error?.code,
             name: error?.name,
             stack: error?.stack
           });
+          
+          // Try to get more error information
+          if (error?.cause) {
+            console.error('Error cause:', error.cause);
+          }
+          if (error?.response) {
+            console.error('Error response:', error.response);
+          }
+        },
+        // Add session configuration
+        session: {
+          // Enable session persistence
+          persist: true,
+          // Session timeout (in seconds) - 7 days
+          timeout: 7 * 24 * 60 * 60
         }
       }}
     >
