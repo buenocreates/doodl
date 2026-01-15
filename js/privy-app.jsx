@@ -27,7 +27,7 @@ fetch('/api/privy-config')
 function WalletConnectButton() {
   const { ready, authenticated, login, logout, user, connectWallet } = usePrivy();
   const { wallets } = useWallets();
-  const { wallets: solanaWallets, connect: connectSolanaWallet } = useSolanaWallets();
+  const { wallets: solanaWallets } = useSolanaWallets();
   
   React.useEffect(() => {
     console.log('Wallet state changed:', { 
@@ -115,47 +115,41 @@ function WalletConnectButton() {
       console.log('🔍 Wallet detection:', { 
         hasPhantom, 
         hasSolflare, 
-        hasConnectSolanaWallet: !!connectSolanaWallet,
+        hasConnectWallet: !!connectWallet,
         solanaWalletsCount: solanaWallets.length 
       });
       
       // WORKAROUND for Privy SIWS issue:
       // Privy's login() tries to do connect + signMessage in one flow (SIWS).
       // Chrome blocks the second navigation (signMessage) because it lacks a user gesture.
-      // By connecting the wallet FIRST using connectSolanaWallet, we separate the steps
-      // and avoid the "Error authenticating session" issue.
-      if (hasPhantom || hasSolflare) {
-        if (connectSolanaWallet) {
-          console.log('🔍 Detected external Solana wallet, attempting direct connection to bypass SIWS issue...');
-          try {
-            // Step 1: Connect wallet only (no signMessage yet)
-            // This works because it has a user gesture (button click)
-            console.log('📱 Step 1: Connecting Solana wallet directly (bypassing SIWS)...');
-            await connectSolanaWallet();
-            console.log('✅ Direct wallet connection successful');
-            
-            // Wait for wallet to be detected
-            await new Promise(resolve => setTimeout(resolve, 2000));
-            
-            // Check if wallet is now connected
-            const solanaWallet = solanaWallets[0] || wallets.find(w => w.chainType === 'solana');
-            if (solanaWallet && solanaWallet.address) {
-              console.log('✅ Solana wallet connected successfully:', solanaWallet.address);
-              // Wallet is connected! Even if full authentication fails, we have the wallet address
-              // The wallet will be usable for the game
-              return;
-            } else {
-              console.warn('⚠️ Wallet connection completed but wallet not detected yet, falling back to login modal');
-            }
-          } catch (directConnectError) {
-            console.warn('⚠️ Direct wallet connection failed, falling back to login modal:', directConnectError);
-            // Fall through to login modal
+      // Try using connectWallet for Solana first, which might bypass the SIWS issue
+      if ((hasPhantom || hasSolflare) && connectWallet) {
+        console.log('🔍 Detected external Solana wallet, attempting direct connection to bypass SIWS issue...');
+        try {
+          // Try connecting Solana wallet directly using connectWallet
+          console.log('📱 Step 1: Connecting Solana wallet directly (bypassing SIWS)...');
+          await connectWallet('solana');
+          console.log('✅ Direct wallet connection successful');
+          
+          // Wait for wallet to be detected
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          
+          // Check if wallet is now connected
+          const solanaWallet = solanaWallets[0] || wallets.find(w => w.chainType === 'solana');
+          if (solanaWallet && solanaWallet.address) {
+            console.log('✅ Solana wallet connected successfully:', solanaWallet.address);
+            // Wallet is connected! Even if full authentication fails, we have the wallet address
+            // The wallet will be usable for the game
+            return;
+          } else {
+            console.warn('⚠️ Wallet connection completed but wallet not detected yet, falling back to login modal');
           }
-        } else {
-          console.warn('⚠️ connectSolanaWallet not available, will use login modal');
+        } catch (directConnectError) {
+          console.warn('⚠️ Direct wallet connection failed, falling back to login modal:', directConnectError);
+          // Fall through to login modal
         }
       } else {
-        console.log('ℹ️ No external Solana wallet detected, using login modal');
+        console.log('ℹ️ Using login modal (no direct connection method available)');
       }
       
       // If already authenticated, logout first to clear any stale sessions
@@ -418,6 +412,7 @@ function PrivyApp() {
     return () => {
       console.error = originalConsoleError;
       observer.disconnect();
+      clearInterval(periodicCheck);
       window.removeEventListener('error', errorHandler, true);
       window.removeEventListener('unhandledrejection', errorHandler, true);
     };
