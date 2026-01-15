@@ -40,28 +40,41 @@ function WalletConnectButton() {
     // Check both regular wallets and Solana-specific wallets
     const solanaWallet = wallets.find(w => w.chainType === 'solana') || solanaWallets[0];
     
-    if (ready && authenticated && solanaWallet) {
+    // If we have a Solana wallet, use it even if authentication session has errors
+    // The wallet connection itself succeeded, so we should allow the user to proceed
+    if (ready && solanaWallet && solanaWallet.address) {
       console.log('Found Solana wallet:', {
         address: solanaWallet.address,
         walletClientType: solanaWallet.walletClientType,
         chainType: solanaWallet.chainType,
-        isExternal: solanaWallet.walletClientType === 'phantom' || solanaWallet.walletClientType === 'solflare'
+        isExternal: solanaWallet.walletClientType === 'phantom' || solanaWallet.walletClientType === 'solflare',
+        authenticated: authenticated
       });
       
-      window.userWalletAddress = solanaWallet.address;
-      console.log('Setting wallet address:', solanaWallet.address);
-      window.dispatchEvent(new CustomEvent('privy-wallet-connected', {
-        detail: { address: solanaWallet.address }
-      }));
+      // Set wallet address if we have one, even if authentication session failed
+      if (window.userWalletAddress !== solanaWallet.address) {
+        window.userWalletAddress = solanaWallet.address;
+        console.log('✅ Setting wallet address:', solanaWallet.address);
+        window.dispatchEvent(new CustomEvent('privy-wallet-connected', {
+          detail: { address: solanaWallet.address }
+        }));
+      }
     } else if (ready && authenticated && wallets.length > 0) {
-      console.warn('User authenticated but no Solana wallet found. Wallets:', wallets.map(w => ({
-        chainType: w.chainType,
-        walletClientType: w.walletClientType
-      })));
-    } else if (ready && !authenticated) {
-      console.log('User not authenticated, clearing wallet address');
-      window.userWalletAddress = null;
-      window.dispatchEvent(new CustomEvent('privy-wallet-disconnected'));
+      // User authenticated but no Solana wallet found
+      const nonSolanaWallets = wallets.filter(w => w.chainType !== 'solana');
+      if (nonSolanaWallets.length > 0) {
+        console.warn('User authenticated but no Solana wallet found. Other wallets:', nonSolanaWallets.map(w => ({
+          chainType: w.chainType,
+          walletClientType: w.walletClientType
+        })));
+      }
+    } else if (ready && !authenticated && solanaWallets.length === 0 && wallets.length === 0) {
+      // No wallets at all and not authenticated - clear wallet address
+      if (window.userWalletAddress) {
+        console.log('No wallets found and not authenticated, clearing wallet address');
+        window.userWalletAddress = null;
+        window.dispatchEvent(new CustomEvent('privy-wallet-disconnected'));
+      }
     }
   }, [ready, authenticated, wallets, solanaWallets]);
   
