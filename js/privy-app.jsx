@@ -95,11 +95,6 @@ function PrivyApp() {
           solana: {
             createOnLogin: 'users-without-wallets'
           }
-        },
-        externalWallets: {
-          solana: {
-            connectors: ['phantom', 'solflare']
-          }
         }
       }}
     >
