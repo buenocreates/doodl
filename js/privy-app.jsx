@@ -2,7 +2,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { PrivyProvider, usePrivy, useWallets } from '@privy-io/react-auth';
-import { toSolanaWalletConnectors } from '@privy-io/react-auth/solana';
+import { toSolanaWalletConnectors, useSolanaWallets } from '@privy-io/react-auth/solana';
 
 // Get Privy App ID from server
 let PRIVY_APP_ID = 'cmkdyx5cg02hvlb0cexfoj8sj';
@@ -25,36 +25,45 @@ fetch('/api/privy-config')
 
 // Wallet Connect Component
 function WalletConnectButton() {
-  const { ready, authenticated, login, logout, user } = usePrivy();
+  const { ready, authenticated, login, logout, user, connectWallet } = usePrivy();
   const { wallets } = useWallets();
+  const { wallets: solanaWallets } = useSolanaWallets();
   
   React.useEffect(() => {
-    console.log('Wallet state changed:', { ready, authenticated, walletCount: wallets.length });
+    console.log('Wallet state changed:', { 
+      ready, 
+      authenticated, 
+      walletCount: wallets.length,
+      solanaWalletCount: solanaWallets.length 
+    });
     
-    if (ready && authenticated && wallets.length > 0) {
-      // User is authenticated and has a wallet
-      const solanaWallet = wallets.find(w => w.chainType === 'solana');
-      console.log('Found Solana wallet:', solanaWallet ? {
+    // Check both regular wallets and Solana-specific wallets
+    const solanaWallet = wallets.find(w => w.chainType === 'solana') || solanaWallets[0];
+    
+    if (ready && authenticated && solanaWallet) {
+      console.log('Found Solana wallet:', {
         address: solanaWallet.address,
         walletClientType: solanaWallet.walletClientType,
-        chainType: solanaWallet.chainType
-      } : 'none');
+        chainType: solanaWallet.chainType,
+        isExternal: solanaWallet.walletClientType === 'phantom' || solanaWallet.walletClientType === 'solflare'
+      });
       
-      if (solanaWallet) {
-        window.userWalletAddress = solanaWallet.address;
-        console.log('Setting wallet address:', solanaWallet.address);
-        window.dispatchEvent(new CustomEvent('privy-wallet-connected', {
-          detail: { address: solanaWallet.address }
-        }));
-      } else {
-        console.warn('No Solana wallet found, but user is authenticated');
-      }
+      window.userWalletAddress = solanaWallet.address;
+      console.log('Setting wallet address:', solanaWallet.address);
+      window.dispatchEvent(new CustomEvent('privy-wallet-connected', {
+        detail: { address: solanaWallet.address }
+      }));
+    } else if (ready && authenticated && wallets.length > 0) {
+      console.warn('User authenticated but no Solana wallet found. Wallets:', wallets.map(w => ({
+        chainType: w.chainType,
+        walletClientType: w.walletClientType
+      })));
     } else if (ready && !authenticated) {
       console.log('User not authenticated, clearing wallet address');
       window.userWalletAddress = null;
       window.dispatchEvent(new CustomEvent('privy-wallet-disconnected'));
     }
-  }, [ready, authenticated, wallets]);
+  }, [ready, authenticated, wallets, solanaWallets]);
   
   const handleConnect = async () => {
     try {
@@ -62,20 +71,26 @@ function WalletConnectButton() {
       console.log('Current origin:', window.location.origin);
       console.log('Privy App ID:', PRIVY_APP_ID);
       
-      // Try to login - this will show Privy's modal
-      const loginResult = await login();
-      console.log('Login call completed, result:', loginResult);
+      // Try to login - this will show Privy's modal with wallet options
+      // Users can choose to connect external wallet (Phantom/Solflare) or use email
+      await login();
+      console.log('Login call completed');
       
       // Wait a bit to see if authentication completes
       setTimeout(() => {
-        console.log('After login - authenticated:', authenticated, 'wallets:', wallets.length);
-        if (!authenticated || wallets.length === 0) {
-          console.warn('Login completed but user not authenticated or no wallets found');
+        console.log('After login - authenticated:', authenticated, 'wallets:', wallets.length, 'solanaWallets:', solanaWallets.length);
+        const solanaWallet = wallets.find(w => w.chainType === 'solana') || solanaWallets[0];
+        if (solanaWallet) {
+          console.log('✅ Solana wallet connected successfully:', solanaWallet.address);
+        } else if (authenticated && wallets.length > 0) {
+          console.warn('⚠️ User authenticated but no Solana wallet. Available wallets:', wallets.map(w => w.walletClientType));
+        } else if (!authenticated) {
+          console.warn('⚠️ Login completed but user not authenticated');
         }
-      }, 1000);
+      }, 2000);
       
     } catch (error) {
-      console.error('Error connecting wallet:', error);
+      console.error('❌ Error connecting wallet:', error);
       console.error('Error type:', error?.constructor?.name);
       console.error('Error message:', error?.message);
       console.error('Error code:', error?.code);
@@ -88,15 +103,12 @@ function WalletConnectButton() {
         console.error('Could not stringify error');
       }
       
-      // Error will be shown by Privy's UI, but we can also show our notification
-      if (window.showWalletRequiredNotification) {
-        const notification = document.createElement('div');
-        notification.style.cssText = 'position: fixed; bottom: 20px; right: 20px; background: #dc3545; color: #fff; padding: 15px 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); z-index: 10000; max-width: 300px; font-family: Nunito, sans-serif; font-weight: 600;';
-        const errorMsg = error?.message || 'Unknown error';
-        notification.innerHTML = '<div style="position: absolute; top: 5px; right: 5px; background: transparent; border: 1px solid rgba(255,255,255,0.5); color: #fff; width: 24px; height: 24px; border-radius: 4px; cursor: pointer; font-size: 18px; line-height: 1; display: flex; align-items: center; justify-content: center; padding: 0;" onclick="this.parentElement.remove()">×</div><div style="font-size: 16px; font-weight: 700; margin-bottom: 5px;">Connection Error</div><div style="font-size: 14px;">Please try email login or check your wallet connection</div>';
-        document.body.appendChild(notification);
-        setTimeout(() => notification.remove(), 5000);
-      }
+      // Show user-friendly error notification
+      const notification = document.createElement('div');
+      notification.style.cssText = 'position: fixed; bottom: 20px; right: 20px; background: #dc3545; color: #fff; padding: 15px 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); z-index: 10000; max-width: 300px; font-family: Nunito, sans-serif; font-weight: 600;';
+      notification.innerHTML = '<div style="position: absolute; top: 5px; right: 5px; background: transparent; border: 1px solid rgba(255,255,255,0.5); color: #fff; width: 24px; height: 24px; border-radius: 4px; cursor: pointer; font-size: 18px; line-height: 1; display: flex; align-items: center; justify-content: center; padding: 0;" onclick="this.parentElement.remove()">×</div><div style="font-size: 16px; font-weight: 700; margin-bottom: 5px;">Connection Error</div><div style="font-size: 14px;">Please try again or use email login</div>';
+      document.body.appendChild(notification);
+      setTimeout(() => notification.remove(), 5000);
     }
   };
   
@@ -109,17 +121,21 @@ function WalletConnectButton() {
   }
   
   if (authenticated) {
-    // User is authenticated - check if they have a wallet
-    const solanaWallet = wallets.find(w => w.chainType === 'solana');
+    // User is authenticated - check if they have a Solana wallet
+    const solanaWallet = wallets.find(w => w.chainType === 'solana') || solanaWallets[0];
     
     if (solanaWallet) {
       // User has a Solana wallet (embedded or external)
       const address = solanaWallet.address || '';
       const shortAddress = address ? `${address.substring(0, 4)}...${address.substring(address.length - 4)}` : '';
+      const isExternal = solanaWallet.walletClientType === 'phantom' || solanaWallet.walletClientType === 'solflare';
       
       return (
         <div id="header-wallet-info" style={{ display: 'block', color: '#fff', fontSize: '0.9em', marginTop: '5px', textAlign: 'center' }}>
-          <div id="header-wallet-address" style={{ marginBottom: '5px' }}>{shortAddress}</div>
+          <div id="header-wallet-address" style={{ marginBottom: '5px' }}>
+            {shortAddress}
+            {isExternal && <span style={{ fontSize: '0.8em', opacity: 0.7, marginLeft: '5px' }}>({solanaWallet.walletClientType})</span>}
+          </div>
           <button 
             id="header-wallet-disconnect" 
             onClick={handleDisconnect}
@@ -130,17 +146,17 @@ function WalletConnectButton() {
         </div>
       );
     } else {
-      // User is authenticated but no wallet yet - this shouldn't happen with our config
-      // but handle it gracefully
-      console.warn('User authenticated but no Solana wallet found');
+      // User is authenticated but no Solana wallet yet
+      // This can happen if they logged in with email but haven't connected a wallet
+      console.warn('User authenticated but no Solana wallet found. Available wallets:', wallets);
       return (
         <div id="header-wallet-info" style={{ display: 'block', color: '#fff', fontSize: '0.9em', marginTop: '5px', textAlign: 'center' }}>
-          <div style={{ marginBottom: '5px', color: '#ffa500' }}>No wallet</div>
+          <div style={{ marginBottom: '5px', color: '#ffa500' }}>No Solana wallet</div>
           <button 
-            onClick={handleConnect}
+            onClick={() => connectWallet('solana')}
             style={{ padding: '5px 10px', fontSize: '0.8em', background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: '5px', color: '#fff', cursor: 'pointer' }}
           >
-            Add Wallet
+            Connect Wallet
           </button>
         </div>
       );
@@ -201,6 +217,8 @@ function PrivyApp() {
             connectors: toSolanaWalletConnectors(['phantom', 'solflare'])
           }
         },
+        // Ensure Solana wallets are prioritized
+        defaultChain: 'solana',
         // Add error handling
         onError: (error) => {
           console.error('Privy Provider Error:', error);
