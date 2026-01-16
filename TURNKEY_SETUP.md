@@ -1,39 +1,27 @@
 # Turnkey Setup Guide
 
+## Quick Start
+
+For detailed step-by-step instructions on getting your Turnkey credentials, see **[TURNKEY_CREDENTIALS_GUIDE.md](./TURNKEY_CREDENTIALS_GUIDE.md)** - it has complete instructions with screenshots descriptions and troubleshooting.
+
 ## Prerequisites
 
 1. Create a Turnkey account at https://www.turnkey.com
-2. Create a Turnkey Organization
-3. Set up Auth Proxy (required for frontend authentication)
-4. Get your Organization ID and Auth Proxy Config ID from the Turnkey dashboard
+2. Get your Organization ID from the dashboard
+3. Enable Auth Proxy and get your Auth Proxy Config ID
+4. (Optional) Set up WalletConnect for mobile wallet support
 
 ## Environment Variables
 
 Set these environment variables in your `.env` file or hosting platform:
 
 ```bash
-TURNKEY_ORG_ID=your-organization-id-here
-TURNKEY_AUTH_PROXY_CONFIG_ID=your-auth-proxy-config-id-here
-TURNKEY_WALLETCONNECT_PROJECT_ID=your-walletconnect-project-id-here  # Optional, for WalletConnect support
+TURNKEY_ORG_ID=org_xxxxxxxxxxxxxxxxxxxxx
+TURNKEY_AUTH_PROXY_CONFIG_ID=apc_xxxxxxxxxxxxxxxxxxxxx
+TURNKEY_WALLETCONNECT_PROJECT_ID=your-walletconnect-project-id  # Optional
 ```
 
-## Getting Your Turnkey Credentials
-
-1. **Organization ID**: 
-   - Go to your Turnkey dashboard
-   - Navigate to Settings > Organization
-   - Copy your Organization ID
-
-2. **Auth Proxy Config ID**:
-   - Go to Settings > Auth Proxy
-   - Create a new Auth Proxy configuration (if you haven't already)
-   - Copy the Config ID
-
-3. **WalletConnect Project ID** (Optional):
-   - Go to https://cloud.walletconnect.com
-   - Create a new project
-   - Copy the Project ID
-   - This enables WalletConnect support for mobile wallets
+**📖 See [TURNKEY_CREDENTIALS_GUIDE.md](./TURNKEY_CREDENTIALS_GUIDE.md) for detailed instructions on getting these values.**
 
 ## Features
 

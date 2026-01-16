@@ -321,9 +321,15 @@ function TurnkeyApp() {
         ">Wallet Connected Successfully!</h2>
         <p style="
           font-size: 16px;
-          margin: 0 0 16px 0;
+          margin: 0 0 8px 0;
           color: rgba(255, 255, 255, 0.9);
-        ">Your wallet ${shortAddress ? `(${shortAddress})` : ''} is now connected and ready to use.</p>
+        ">Your Solana wallet ${shortAddress ? `(${shortAddress})` : ''} is ready!</p>
+        <p style="
+          font-size: 14px;
+          margin: 0 0 16px 0;
+          color: rgba(255, 255, 255, 0.7);
+          line-height: 1.4;
+        ">💰 <strong>Rewards:</strong> When you win, rewards will be sent directly to this wallet. Just sign in with your email to claim them - no password needed!</p>
         <div style="
           margin-top: 24px;
           padding-top: 16px;
