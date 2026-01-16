@@ -1,14 +1,6 @@
 // Turnkey AsyncStorage polyfill - Browser-compatible storage
 // This provides a localStorage-based implementation of AsyncStorage
-// Must be loaded BEFORE Turnkey app to ensure it's available
-
-(function() {
-  'use strict';
-  
-  // Prevent re-initialization
-  if (typeof window !== 'undefined' && window.AsyncStorage) {
-    return;
-  }
+// Used via Vite alias: @react-native-async-storage/async-storage -> this file
 
 const AsyncStorage = {
   getItem: function(key) {
@@ -86,23 +78,14 @@ const AsyncStorage = {
   }
 };
 
-// CommonJS export
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = AsyncStorage;
-  module.exports.default = AsyncStorage;
-}
+// ES Module export (for Vite bundling)
+export default AsyncStorage;
+export { AsyncStorage };
 
-// Make available globally for Turnkey (when loaded as script tag)
+// Also make available globally for runtime detection
 if (typeof window !== 'undefined') {
-  // Make available globally for Turnkey
   window.AsyncStorage = AsyncStorage;
-  window.global = window.global || window;
-  window.global.AsyncStorage = AsyncStorage;
-  
-  // Also set on globalThis for modern environments
   if (typeof globalThis !== 'undefined') {
     globalThis.AsyncStorage = AsyncStorage;
   }
 }
-
-})();

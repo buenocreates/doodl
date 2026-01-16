@@ -6,7 +6,8 @@ export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
-      // Map React Native async storage to our polyfill
+      // Map React Native async storage to our browser polyfill
+      // The real package is installed but needs browser polyfill
       '@react-native-async-storage/async-storage': path.resolve(__dirname, 'js/turnkey-async-storage.js'),
       'react-native': 'react-native-web'
     }
