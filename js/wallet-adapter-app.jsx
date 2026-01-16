@@ -10,16 +10,7 @@ import { clusterApiUrl } from '@solana/web3.js';
 import '@solana/wallet-adapter-react-ui/styles.css';
 
 // Get RPC endpoint (use mainnet or devnet)
-const SOLANA_RPC_URL = process.env.SOLANA_RPC_URL || 'https://api.mainnet-beta.solana.com';
-
-// Initialize wallets
-const wallets = React.useMemo(
-  () => [
-    new PhantomWalletAdapter(),
-    new SolflareWalletAdapter(),
-  ],
-  []
-);
+const SOLANA_RPC_URL = 'https://api.mainnet-beta.solana.com';
 
 // Wallet Connect Component
 function WalletConnectButton() {
