@@ -13,7 +13,24 @@ export default defineConfig({
     }
   },
   build: {
+    commonjsOptions: {
+      transformMixedEsModules: true
+    },
+    rollupOptions: {
+      external: (id) => {
+        // Don't bundle Node.js crypto modules - they're browser-only
+        if (id.includes('nodecrypto') || id === 'crypto' || id === 'stream') {
+          return false; // Let Vite handle it
+        }
+        return false;
+      }
+    }
+  },
+  build: {
     outDir: 'dist',
+    commonjsOptions: {
+      transformMixedEsModules: true
+    },
     rollupOptions: {
       input: {
         turnkey: './js/turnkey-app.jsx'
@@ -25,6 +42,13 @@ export default defineConfig({
         globals: {
           '@react-native-async-storage/async-storage': 'AsyncStorage'
         }
+      },
+      onwarn(warning, warn) {
+        // Suppress warnings about Node.js crypto modules - they're handled by Turnkey
+        if (warning.code === 'UNRESOLVED_IMPORT' && warning.source?.includes('nodecrypto')) {
+          return;
+        }
+        warn(warning);
       }
     }
   },
