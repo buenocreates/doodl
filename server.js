@@ -96,6 +96,15 @@ app.get('/faq', (req, res) => {
   res.sendFile(path.join(__dirname, 'faq.html'));
 });
 
+// Turnkey config endpoint
+app.get('/api/turnkey-config', (req, res) => {
+  res.json({
+    orgId: process.env.TURNKEY_ORG_ID || '',
+    authProxyConfigId: process.env.TURNKEY_AUTH_PROXY_CONFIG_ID || '',
+    walletConnectProjectId: process.env.TURNKEY_WALLETCONNECT_PROJECT_ID || ''
+  });
+});
+
 // Endpoint to get Privy App ID (server-side only, not exposed in client code)
 app.get('/api/privy-config', (req, res) => {
   res.json({

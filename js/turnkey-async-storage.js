@@ -1,5 +1,14 @@
 // Turnkey AsyncStorage polyfill - Browser-compatible storage
 // This provides a localStorage-based implementation of AsyncStorage
+// Must be loaded BEFORE Turnkey app to ensure it's available
+
+(function() {
+  'use strict';
+  
+  // Prevent re-initialization
+  if (typeof window !== 'undefined' && window.AsyncStorage) {
+    return;
+  }
 
 const AsyncStorage = {
   getItem: function(key) {
@@ -84,4 +93,19 @@ if (typeof module !== 'undefined' && module.exports) {
 }
 
 // ES module export
+if (typeof window !== 'undefined') {
+  // Make available globally for Turnkey
+  window.AsyncStorage = AsyncStorage;
+  window.global = window.global || window;
+  window.global.AsyncStorage = AsyncStorage;
+  
+  // Also set on globalThis for modern environments
+  if (typeof globalThis !== 'undefined') {
+    globalThis.AsyncStorage = AsyncStorage;
+  }
+}
+
+// ES module export
 export default AsyncStorage;
+
+})();
