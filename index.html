@@ -3,17 +3,48 @@
     <script>
         // Prevent browser extensions from injecting ethereum/Web3 code
         // This prevents the "Cannot redefine property: ethereum" error
+        // For Solana-only apps, we don't need ethereum, so we make it configurable
+        // to allow extensions to inject it without errors
         if (typeof window.ethereum === 'undefined') {
           try {
             Object.defineProperty(window, 'ethereum', {
               value: undefined,
-              writable: false,
-              configurable: false
+              writable: true,
+              configurable: true  // Allow redefinition to prevent errors from extensions
             });
           } catch (e) {
             // Ignore if already defined
           }
+        } else {
+          // If ethereum is already defined, make it configurable
+          try {
+            const descriptor = Object.getOwnPropertyDescriptor(window, 'ethereum');
+            if (descriptor && !descriptor.configurable) {
+              // Can't change if not configurable, but we can try to catch the error
+              console.warn('window.ethereum is already defined and not configurable');
+            }
+          } catch (e) {
+            // Ignore
+          }
         }
+        
+        // Catch any errors from extensions trying to inject ethereum
+        const originalDefineProperty = Object.defineProperty;
+        Object.defineProperty = function(obj, prop, descriptor) {
+          if (obj === window && prop === 'ethereum') {
+            try {
+              return originalDefineProperty.call(this, obj, prop, {
+                ...descriptor,
+                configurable: true  // Force configurable to prevent errors
+              });
+            } catch (e) {
+              // If it still fails, just log and continue
+              console.warn('Extension tried to redefine window.ethereum:', e.message);
+              return obj;
+            }
+          }
+          return originalDefineProperty.apply(this, arguments);
+        };
         
         // Handle room code from URL (e.g., ?UsCN6Pnv)
         // Store it for the Play button to use, but DON'T auto-join

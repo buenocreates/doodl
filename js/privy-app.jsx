@@ -1,7 +1,7 @@
 // Privy React App - Wrapper for Privy SDK
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import { PrivyProvider, usePrivy, useWallets } from '@privy-io/react-auth';
+import { PrivyProvider, usePrivy, useWallets, useConnectWallet } from '@privy-io/react-auth';
 import { toSolanaWalletConnectors, useSolanaWallets } from '@privy-io/react-auth/solana';
 
 // Get Privy App ID from server
@@ -25,9 +25,17 @@ fetch('/api/privy-config')
 
 // Wallet Connect Component
 function WalletConnectButton() {
-  const { ready, authenticated, login, logout, user, connectWallet } = usePrivy();
+  const { ready, authenticated, login, logout, user } = usePrivy();
   const { wallets } = useWallets();
   const { wallets: solanaWallets } = useSolanaWallets();
+  const { connectWallet } = useConnectWallet({
+    onSuccess: ({ wallet }) => {
+      console.log('✅ Wallet connected successfully:', wallet);
+    },
+    onError: (error) => {
+      console.error('❌ Wallet connection error:', error);
+    }
+  });
   
   React.useEffect(() => {
     console.log('Wallet state changed:', { 
@@ -119,38 +127,10 @@ function WalletConnectButton() {
         solanaWalletsCount: solanaWallets.length 
       });
       
-      // WORKAROUND for Privy SIWS issue:
-      // Privy's login() tries to do connect + signMessage in one flow (SIWS).
-      // Chrome blocks the second navigation (signMessage) because it lacks a user gesture.
-      // Try using connectWallet for Solana first, which might bypass the SIWS issue
-      if ((hasPhantom || hasSolflare) && connectWallet) {
-        console.log('🔍 Detected external Solana wallet, attempting direct connection to bypass SIWS issue...');
-        try {
-          // Try connecting Solana wallet directly using connectWallet
-          console.log('📱 Step 1: Connecting Solana wallet directly (bypassing SIWS)...');
-          await connectWallet('solana');
-          console.log('✅ Direct wallet connection successful');
-          
-          // Wait for wallet to be detected
-          await new Promise(resolve => setTimeout(resolve, 2000));
-          
-          // Check if wallet is now connected
-          const solanaWallet = solanaWallets[0] || wallets.find(w => w.chainType === 'solana');
-          if (solanaWallet && solanaWallet.address) {
-            console.log('✅ Solana wallet connected successfully:', solanaWallet.address);
-            // Wallet is connected! Even if full authentication fails, we have the wallet address
-            // The wallet will be usable for the game
-            return;
-          } else {
-            console.warn('⚠️ Wallet connection completed but wallet not detected yet, falling back to login modal');
-          }
-        } catch (directConnectError) {
-          console.warn('⚠️ Direct wallet connection failed, falling back to login modal:', directConnectError);
-          // Fall through to login modal
-        }
-      } else {
-        console.log('ℹ️ Using login modal (no direct connection method available)');
-      }
+      // Use Privy's login() which handles both wallet connection and authentication
+      // This will show the login modal where users can connect their wallet
+      // Privy will automatically create an account if one doesn't exist
+      console.log('📱 Opening Privy login modal...');
       
       // If already authenticated, logout first to clear any stale sessions
       if (authenticated) {
@@ -164,30 +144,38 @@ function WalletConnectButton() {
         }
       }
       
-      // Try to login - this will show Privy's modal with wallet options
-      // Users can choose to connect external wallet (Phantom/Solflare) or use email
-      console.log('📱 Opening Privy login modal...');
-      const loginPromise = login();
-      
-      // Set a timeout to catch if login hangs
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Login timeout after 30 seconds')), 30000)
-      );
-      
-      await Promise.race([loginPromise, timeoutPromise]);
-      console.log('✅ Login modal closed');
-      
-      // Wait a bit to see if authentication completes
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      console.log('After login - authenticated:', authenticated, 'wallets:', wallets.length, 'solanaWallets:', solanaWallets.length);
-      const solanaWallet = wallets.find(w => w.chainType === 'solana') || solanaWallets[0];
-      if (solanaWallet) {
-        console.log('✅ Solana wallet connected successfully:', solanaWallet.address);
-      } else if (authenticated && wallets.length > 0) {
-        console.warn('⚠️ User authenticated but no Solana wallet. Available wallets:', wallets.map(w => w.walletClientType));
-      } else if (!authenticated) {
-        console.warn('⚠️ Login completed but user not authenticated');
+      try {
+        // login() handles both connection and authentication
+        // It will show a modal where users can select their wallet
+        // After connecting, Privy will automatically authenticate and create an account if needed
+        await login();
+        console.log('✅ Login modal closed');
+        
+        // Wait a bit for authentication to complete
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        
+        // Check the result
+        const solanaWallet = wallets.find(w => w.chainType === 'solana') || solanaWallets[0];
+        if (solanaWallet && solanaWallet.address) {
+          console.log('✅ Solana wallet connected and authenticated:', solanaWallet.address);
+        } else if (authenticated && wallets.length > 0) {
+          console.warn('⚠️ User authenticated but no Solana wallet. Available wallets:', wallets.map(w => w.walletClientType));
+        } else if (!authenticated) {
+          console.warn('⚠️ Login completed but user not authenticated. Wallet may still be connected.');
+          // Check if wallet is connected even without authentication
+          const connectedWallet = solanaWallets[0] || wallets.find(w => w.chainType === 'solana');
+          if (connectedWallet && connectedWallet.address) {
+            console.log('✅ Wallet connected (without full authentication):', connectedWallet.address);
+          }
+        }
+      } catch (loginError) {
+        // Even if login fails, check if wallet was connected
+        console.warn('⚠️ Login error, but checking if wallet was connected:', loginError);
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        const solanaWallet = solanaWallets[0] || wallets.find(w => w.chainType === 'solana');
+        if (solanaWallet && solanaWallet.address) {
+          console.log('✅ Wallet connected despite login error:', solanaWallet.address);
+        }
       }
       
     } catch (error) {
@@ -272,7 +260,7 @@ function WalletConnectButton() {
         <div id="header-wallet-info" style={{ display: 'block', color: '#fff', fontSize: '0.9em', marginTop: '5px', textAlign: 'center' }}>
           <div style={{ marginBottom: '5px', color: '#ffa500' }}>No Solana wallet</div>
           <button 
-            onClick={() => connectWallet('solana')}
+            onClick={() => connectWallet({ walletChainType: 'solana-only' })}
             style={{ padding: '5px 10px', fontSize: '0.8em', background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: '5px', color: '#fff', cursor: 'pointer' }}
           >
             Connect Wallet
