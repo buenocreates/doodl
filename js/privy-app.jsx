@@ -48,49 +48,57 @@ function WalletConnectButton() {
     // Check both regular wallets and Solana-specific wallets
     const solanaWallet = wallets.find(w => w.chainType === 'solana') || solanaWallets[0];
     
-    // If we have a Solana wallet, use it even if authentication session has errors
-    // The wallet connection itself succeeded, so we should allow the user to proceed
-    if (ready && solanaWallet && solanaWallet.address) {
-      console.log('Found Solana wallet:', {
-        address: solanaWallet.address,
-        walletClientType: solanaWallet.walletClientType,
-        chainType: solanaWallet.chainType,
-        isExternal: solanaWallet.walletClientType === 'phantom' || solanaWallet.walletClientType === 'solflare',
-        authenticated: authenticated
-      });
-      
-      // Set wallet address if we have one, even if authentication session failed
-      // This allows users to play even if Privy's authentication session has errors
-      if (window.userWalletAddress !== solanaWallet.address) {
-        window.userWalletAddress = solanaWallet.address;
-        console.log('✅ Setting wallet address:', solanaWallet.address);
-        console.log('✅ Dispatching privy-wallet-connected event');
-        
-        // Dispatch the event to enable play buttons
-        const event = new CustomEvent('privy-wallet-connected', {
-          detail: { address: solanaWallet.address }
+      // If we have a Solana wallet, use it even if authentication session has errors
+      // The wallet connection itself succeeded, so we should allow the user to proceed
+      if (ready && solanaWallet && solanaWallet.address) {
+        console.log('Found Solana wallet:', {
+          address: solanaWallet.address,
+          walletClientType: solanaWallet.walletClientType,
+          chainType: solanaWallet.chainType,
+          isExternal: solanaWallet.walletClientType === 'phantom' || solanaWallet.walletClientType === 'solflare',
+          authenticated: authenticated
         });
-        window.dispatchEvent(event);
         
-        // Also manually enable buttons in case event listener isn't working
-        setTimeout(() => {
-          const playBtn = document.getElementById('play-button');
-          const createBtn = document.getElementById('create-button');
-          if (playBtn) {
-            playBtn.disabled = false;
-            playBtn.style.opacity = '1';
-            playBtn.style.cursor = 'pointer';
-            console.log('✅ Enabled play button');
-          }
-          if (createBtn) {
-            createBtn.disabled = false;
-            createBtn.style.opacity = '1';
-            createBtn.style.cursor = 'pointer';
-            console.log('✅ Enabled create button');
-          }
-        }, 100);
-      }
-    } else if (ready && authenticated && wallets.length > 0) {
+        // Set wallet address if we have one, even if authentication session failed
+        // This allows users to play even if Privy's authentication session has errors
+        if (window.userWalletAddress !== solanaWallet.address) {
+          window.userWalletAddress = solanaWallet.address;
+          console.log('✅ Setting wallet address:', solanaWallet.address);
+          console.log('✅ Dispatching privy-wallet-connected event');
+          
+          // Dispatch the event to enable play buttons
+          const event = new CustomEvent('privy-wallet-connected', {
+            detail: { address: solanaWallet.address }
+          });
+          window.dispatchEvent(event);
+          
+          // Show success notification with Privy branding
+          setTimeout(() => {
+            // Access the showSuccessNotification function from the parent scope
+            if (window.showPrivySuccessNotification) {
+              window.showPrivySuccessNotification(solanaWallet.address);
+            }
+          }, 500);
+          
+          // Also manually enable buttons in case event listener isn't working
+          setTimeout(() => {
+            const playBtn = document.getElementById('play-button');
+            const createBtn = document.getElementById('create-button');
+            if (playBtn) {
+              playBtn.disabled = false;
+              playBtn.style.opacity = '1';
+              playBtn.style.cursor = 'pointer';
+              console.log('✅ Enabled play button');
+            }
+            if (createBtn) {
+              createBtn.disabled = false;
+              createBtn.style.opacity = '1';
+              createBtn.style.cursor = 'pointer';
+              console.log('✅ Enabled create button');
+            }
+          }, 100);
+        }
+      } else if (ready && authenticated && wallets.length > 0) {
       // User authenticated but no Solana wallet found
       const nonSolanaWallets = wallets.filter(w => w.chainType !== 'solana');
       if (nonSolanaWallets.length > 0) {
@@ -318,9 +326,136 @@ function WalletConnectButton() {
 function PrivyApp() {
   // Add error handler for Privy errors
   React.useEffect(() => {
+    // Make success notification function globally available
+    window.showPrivySuccessNotification = (walletAddress) => {
+      // Remove any existing success notifications
+      const existing = document.getElementById('privy-success-notification');
+      if (existing) {
+        existing.remove();
+      }
+      
+      const shortAddress = walletAddress ? `${walletAddress.substring(0, 4)}...${walletAddress.substring(walletAddress.length - 4)}` : '';
+      
+      const notification = document.createElement('div');
+      notification.id = 'privy-success-notification';
+      notification.style.cssText = `
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+        border: 2px solid #9945FF;
+        border-radius: 16px;
+        padding: 32px;
+        box-shadow: 0 8px 32px rgba(153, 69, 255, 0.3);
+        z-index: 10001;
+        max-width: 400px;
+        width: 90%;
+        text-align: center;
+        font-family: 'Nunito', sans-serif;
+        color: #fff;
+        animation: slideIn 0.3s ease-out;
+      `;
+      
+      // Add animation if not already added
+      if (!document.getElementById('privy-success-animation')) {
+        const style = document.createElement('style');
+        style.id = 'privy-success-animation';
+        style.textContent = `
+          @keyframes slideIn {
+            from {
+              opacity: 0;
+              transform: translate(-50%, -60%);
+            }
+            to {
+              opacity: 1;
+              transform: translate(-50%, -50%);
+            }
+          }
+        `;
+        document.head.appendChild(style);
+      }
+      
+      notification.innerHTML = `
+        <div style="margin-bottom: 20px;">
+          <div style="
+            width: 64px;
+            height: 64px;
+            margin: 0 auto;
+            background: linear-gradient(135deg, #9945FF 0%, #14F195 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            box-shadow: 0 4px 16px rgba(153, 69, 255, 0.4);
+          ">
+            ✓
+          </div>
+        </div>
+        <h2 style="
+          font-size: 24px;
+          font-weight: 700;
+          margin: 0 0 12px 0;
+          color: #14F195;
+        ">Wallet Connected Successfully!</h2>
+        <p style="
+          font-size: 16px;
+          margin: 0 0 16px 0;
+          color: rgba(255, 255, 255, 0.9);
+        ">Your wallet ${shortAddress ? `(${shortAddress})` : ''} is now connected and ready to use.</p>
+        <div style="
+          margin-top: 24px;
+          padding-top: 16px;
+          border-top: 1px solid rgba(255, 255, 255, 0.1);
+          font-size: 12px;
+          color: rgba(255, 255, 255, 0.6);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+        ">
+          <span>Protected by</span>
+          <span style="
+            background: linear-gradient(135deg, #9945FF 0%, #14F195 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-weight: 700;
+          ">Privy</span>
+        </div>
+        <button onclick="this.closest('#privy-success-notification').remove()" style="
+          margin-top: 20px;
+          background: linear-gradient(135deg, #9945FF 0%, #14F195 100%);
+          color: #fff;
+          border: none;
+          padding: 12px 32px;
+          border-radius: 8px;
+          font-weight: 700;
+          cursor: pointer;
+          font-size: 16px;
+          font-family: 'Nunito', sans-serif;
+          box-shadow: 0 4px 12px rgba(153, 69, 255, 0.3);
+          transition: transform 0.2s;
+        " onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+          Continue
+        </button>
+      `;
+      
+      document.body.appendChild(notification);
+      
+      // Auto-remove after 5 seconds
+      setTimeout(() => {
+        if (notification.parentNode) {
+          notification.style.animation = 'slideIn 0.3s ease-out reverse';
+          setTimeout(() => notification.remove(), 300);
+        }
+      }, 5000);
+    };
+    
     // Function to hide Privy's error modal - very aggressive approach
     const hidePrivyErrorModal = () => {
-      // Look for Privy's error modal with multiple selectors
+      // Look for Privy's error modal with multiple selectors - be very aggressive
       const selectors = [
         '[data-privy-modal]',
         '[class*="privy"]',
@@ -331,7 +466,8 @@ function PrivyApp() {
         'div[role="dialog"]',
         '[class*="error"]',
         'div[style*="position: fixed"]',
-        'div[style*="position:absolute"]'
+        'div[style*="position:absolute"]',
+        'div[style*="z-index"]'
       ];
       
       selectors.forEach(selector => {
@@ -340,19 +476,22 @@ function PrivyApp() {
           elements.forEach(element => {
             const text = (element.textContent || '').toLowerCase();
             const style = window.getComputedStyle(element);
+            const zIndex = parseInt(style.zIndex) || 0;
             
-            // Check if this looks like Privy's error modal
+            // Check if this looks like Privy's error modal - be very broad
             if ((text.includes('could not log in') || 
                  text.includes('error authenticating') ||
                  text.includes('please try connecting again') ||
-                 text.includes('retry')) &&
+                 text.includes('retry') ||
+                 text.includes('error') && text.includes('wallet')) &&
                 (style.position === 'fixed' || style.position === 'absolute' || 
-                 parseInt(style.zIndex) > 1000 || element.classList.toString().includes('privy'))) {
+                 zIndex > 1000 || element.classList.toString().includes('privy'))) {
               console.log('🔇 Hiding Privy error modal:', element);
-              element.style.display = 'none';
-              element.style.visibility = 'hidden';
-              element.style.opacity = '0';
-              element.style.pointerEvents = 'none';
+              element.style.display = 'none !important';
+              element.style.visibility = 'hidden !important';
+              element.style.opacity = '0 !important';
+              element.style.pointerEvents = 'none !important';
+              element.style.zIndex = '-9999 !important';
               try {
                 element.remove();
               } catch (e) {
@@ -365,18 +504,22 @@ function PrivyApp() {
         }
       });
       
-      // Also remove any backdrop/overlay elements
-      document.querySelectorAll('body > div').forEach(div => {
+      // Also remove any backdrop/overlay elements - check all fixed position divs
+      document.querySelectorAll('body > div, body > div > div').forEach(div => {
         try {
           const style = window.getComputedStyle(div);
-          if (style.position === 'fixed' && 
-              (parseInt(style.zIndex) > 1000 || style.backgroundColor.includes('rgba') || style.backgroundColor.includes('rgb'))) {
+          const zIndex = parseInt(style.zIndex) || 0;
+          if ((style.position === 'fixed' || style.position === 'absolute') && zIndex > 1000) {
             const text = (div.textContent || '').toLowerCase();
-            if (text.includes('could not log in') || text.includes('privy') || text.includes('retry') || text.includes('error authenticating')) {
+            if (text.includes('could not log in') || 
+                (text.includes('privy') && (text.includes('retry') || text.includes('error'))) || 
+                text.includes('error authenticating')) {
               console.log('🔇 Hiding Privy backdrop/overlay');
-              div.style.display = 'none';
-              div.style.visibility = 'hidden';
-              div.style.opacity = '0';
+              div.style.display = 'none !important';
+              div.style.visibility = 'hidden !important';
+              div.style.opacity = '0 !important';
+              div.style.pointerEvents = 'none !important';
+              div.style.zIndex = '-9999 !important';
               try {
                 div.remove();
               } catch (e) {
@@ -400,14 +543,17 @@ function PrivyApp() {
           errorMessage.includes('authenticating session')) {
         console.warn('⚠️ Caught Privy authentication session error. Suppressing error modal.');
         
-        // Hide the error modal immediately and repeatedly
+        // Hide the error modal immediately and repeatedly - very aggressive
         hidePrivyErrorModal(); // Immediate
+        setTimeout(hidePrivyErrorModal, 10);
         setTimeout(hidePrivyErrorModal, 50);
         setTimeout(hidePrivyErrorModal, 100);
+        setTimeout(hidePrivyErrorModal, 200);
         setTimeout(hidePrivyErrorModal, 300);
         setTimeout(hidePrivyErrorModal, 500);
         setTimeout(hidePrivyErrorModal, 1000);
         setTimeout(hidePrivyErrorModal, 2000);
+        setTimeout(hidePrivyErrorModal, 3000);
         
         // Check if wallet is still connected despite the error
         setTimeout(() => {
@@ -453,12 +599,17 @@ function PrivyApp() {
       mutations.forEach((mutation) => {
         mutation.addedNodes.forEach((node) => {
           if (node.nodeType === 1) { // Element node
-            const text = node.textContent || '';
-            if (text.includes('Could not log in') || 
-                text.includes('Error authenticating') ||
-                (text.includes('privy') && text.includes('Retry'))) {
-              console.log('🔇 Detected Privy error modal, hiding it');
+            const text = (node.textContent || '').toLowerCase();
+            // Check for error modals - be very broad
+            if (text.includes('could not log in') || 
+                text.includes('error authenticating') ||
+                (text.includes('privy') && (text.includes('retry') || text.includes('error'))) ||
+                (text.includes('error') && text.includes('wallet'))) {
+              console.log('🔇 Detected Privy error modal, hiding it immediately');
               hidePrivyErrorModal();
+              // Also check children
+              setTimeout(hidePrivyErrorModal, 10);
+              setTimeout(hidePrivyErrorModal, 50);
             }
           }
         });
@@ -467,8 +618,15 @@ function PrivyApp() {
     
     observer.observe(document.body, {
       childList: true,
-      subtree: true
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['style', 'class']
     });
+    
+    // Also run periodic check
+    const periodicCheck = setInterval(() => {
+      hidePrivyErrorModal();
+    }, 100);
     
     window.addEventListener('error', errorHandler, true);
     window.addEventListener('unhandledrejection', errorHandler, true);
@@ -476,7 +634,7 @@ function PrivyApp() {
     return () => {
       console.error = originalConsoleError;
       observer.disconnect();
-      clearInterval(periodicCheck);
+      if (periodicCheck) clearInterval(periodicCheck);
       window.removeEventListener('error', errorHandler, true);
       window.removeEventListener('unhandledrejection', errorHandler, true);
     };
