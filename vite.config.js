@@ -4,34 +4,27 @@ import path from 'path';
 
 export default defineConfig({
   plugins: [react()],
-  resolve: {
-    alias: {
-      // Map React Native async storage to our polyfill
-      '@react-native-async-storage/async-storage': path.resolve(__dirname, 'js/turnkey-async-storage.js'),
-      'react-native': 'react-native-web'
-    }
-  },
   build: {
     outDir: 'dist',
+    cssCodeSplit: false,
     rollupOptions: {
       input: {
-        turnkey: './js/turnkey-app.jsx'
+        wallet: './js/wallet-adapter-app.jsx'
       },
       output: {
-        entryFileNames: 'turnkey-app.js',
+        entryFileNames: 'wallet-adapter-app.js',
+        assetFileNames: (assetInfo) => {
+          if (assetInfo.name && assetInfo.name.endsWith('.css')) {
+            return 'wallet-adapter-app.css';
+          }
+          return assetInfo.name || 'asset';
+        },
         format: 'iife',
-        name: 'TurnkeyApp',
-        globals: {
-          '@react-native-async-storage/async-storage': 'null'
-        }
+        name: 'WalletAdapterApp'
       }
     }
   },
   define: {
-    'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'production'),
-    '__DEV__': false
-  },
-  optimizeDeps: {
-    exclude: ['@react-native-async-storage/async-storage']
+    'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'production')
   }
 });

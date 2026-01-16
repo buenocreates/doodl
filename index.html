@@ -115,7 +115,7 @@
         <link href="https://fonts.googleapis.com/css2?family=Inconsolata&amp;display=swap" rel="stylesheet">
         <link href="https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,400;0,600;0,700;0,800;1,400&amp;display=swap" rel="stylesheet">
         <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-        <!-- Turnkey will be loaded via npm package @turnkey/react-wallet-kit -->
+        <!-- Solana Wallet Adapter will be loaded via npm package @solana/wallet-adapter-react -->
     </head>
     <body translate="no">
         <div id="preroll"></div>
@@ -977,14 +977,13 @@
 // NO AUTO-JOIN - User should go to home screen and click Play button
 // The Play button will automatically use the room code from URL (game.js handles this)
 </script>
-        <!-- Turnkey Storage Polyfill - Must load before Turnkey app -->
-        <script src="/js/turnkey-storage-polyfill.js"></script>
-        <!-- Turnkey React App - Load bundled version -->
-        <script src="/dist/turnkey-app.js"></script>
-        <!-- Note: Turnkey app auto-initializes in turnkey-app.js, no need to call initTurnkeyApp here -->
+        <!-- Solana Wallet Adapter App - Load bundled version -->
+        <link rel="stylesheet" href="/dist/wallet-adapter-app.css">
+        <script src="/dist/wallet-adapter-app.js"></script>
+        <!-- Note: Wallet adapter app auto-initializes, no need to call initWalletAdapterApp here -->
             
-            // Listen for wallet connection events (Turnkey)
-            window.addEventListener('turnkey-wallet-connected', function(e) {
+            // Listen for wallet connection events (Wallet Adapter)
+            window.addEventListener('wallet-adapter-connected', function(e) {
                 const address = e.detail.address;
                 window.userWalletAddress = address;
                 
@@ -1005,7 +1004,7 @@
                 }
             });
             
-            window.addEventListener('turnkey-wallet-disconnected', function() {
+            window.addEventListener('wallet-adapter-disconnected', function() {
                 window.userWalletAddress = null;
                 
                 console.log('🔌 Wallet disconnected event received');
