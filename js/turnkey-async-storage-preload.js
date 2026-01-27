@@ -7,7 +7,7 @@
   if (typeof window === 'undefined') return;
   
   // Only create if it doesn't exist
-  if (window.AsyncStorage) {
+  if (window.AsyncStorage && window.__ASYNC_STORAGE_POLYFILL_LOADED__) {
     console.log('✅ AsyncStorage already exists, skipping polyfill');
     return;
   }
@@ -80,62 +80,119 @@
     }
   };
   
+  // Intercept require() calls BEFORE setting up anything else
+  // This is critical - Turnkey might call require() synchronously during module load
+  if (typeof window !== 'undefined') {
+    // Intercept require if it exists (for CommonJS environments)
+    const originalRequire = window.require || (typeof require !== 'undefined' ? require : null);
+    
+    if (originalRequire) {
+      // Wrap require to intercept AsyncStorage requests
+      const wrappedRequire = function(id) {
+        if (id === '@react-native-async-storage/async-storage' || 
+            id.includes('async-storage')) {
+          return AsyncStorage;
+        }
+        return originalRequire.apply(this, arguments);
+      };
+      
+      // Copy properties from original require
+      Object.keys(originalRequire).forEach(key => {
+        wrappedRequire[key] = originalRequire[key];
+      });
+      
+      // Set up require.cache
+      if (!wrappedRequire.cache) {
+        wrappedRequire.cache = {};
+      }
+      wrappedRequire.cache['@react-native-async-storage/async-storage'] = {
+        exports: AsyncStorage,
+        loaded: true,
+        id: '@react-native-async-storage/async-storage'
+      };
+      
+      // Override require.resolve
+      const originalResolve = wrappedRequire.resolve;
+      wrappedRequire.resolve = function(id) {
+        if (id === '@react-native-async-storage/async-storage') {
+          return '@react-native-async-storage/async-storage';
+        }
+        if (typeof originalResolve === 'function') {
+          return originalResolve.apply(this, arguments);
+        }
+        return id;
+      };
+      
+      // Try to replace require on window if possible
+      try {
+        window.require = wrappedRequire;
+      } catch (e) {
+        // Ignore if can't replace
+      }
+    }
+    
+    // Also intercept global require if it exists
+    if (typeof require !== 'undefined') {
+      const globalRequire = require;
+      if (!globalRequire.cache) {
+        globalRequire.cache = {};
+      }
+      globalRequire.cache['@react-native-async-storage/async-storage'] = {
+        exports: AsyncStorage,
+        loaded: true,
+        id: '@react-native-async-storage/async-storage'
+      };
+    }
+  }
+  
   // Make available globally on all possible global objects
   window.AsyncStorage = AsyncStorage;
+  window.__ASYNC_STORAGE_POLYFILL_LOADED__ = true;
+  
   if (typeof globalThis !== 'undefined') {
     globalThis.AsyncStorage = AsyncStorage;
+    globalThis.__ASYNC_STORAGE_POLYFILL_LOADED__ = true;
   }
   if (typeof global !== 'undefined') {
     global.AsyncStorage = AsyncStorage;
+    global.__ASYNC_STORAGE_POLYFILL_LOADED__ = true;
   }
   
-  // Set up require cache for dynamic requires (CommonJS)
-  if (typeof require !== 'undefined') {
-    if (!require.cache) {
-      require.cache = {};
-    }
-    require.cache['@react-native-async-storage/async-storage'] = {
-      exports: AsyncStorage,
-      loaded: true,
-      id: '@react-native-async-storage/async-storage'
-    };
-    
-    // Mock require.resolve to handle dynamic requires
-    const originalResolve = require.resolve;
-    require.resolve = function(id) {
-      if (id === '@react-native-async-storage/async-storage') {
-        return '@react-native-async-storage/async-storage';
-      }
-      if (typeof originalResolve === 'function') {
-        return originalResolve.apply(this, arguments);
-      }
-      return id;
-    };
-  }
-  
-  // Also set up for ES module dynamic imports (if needed)
-  if (typeof window !== 'undefined') {
-    // Create a module registry for dynamic imports
-    window.__ASYNC_STORAGE_MODULE__ = AsyncStorage;
-    
-    // Ensure AsyncStorage is available for Turnkey's MobileStorageManager detection
-    // Turnkey checks for AsyncStorage in various ways, so we need to cover all bases
+  // Ensure AsyncStorage is available for Turnkey's MobileStorageManager detection
+  // Turnkey checks for AsyncStorage in various ways, so we need to cover all bases
+  try {
     Object.defineProperty(window, 'AsyncStorage', {
       value: AsyncStorage,
-      writable: false,
-      configurable: false,
+      writable: true,  // Make writable so Turnkey can override if needed
+      configurable: true,  // Make configurable
       enumerable: true
     });
+  } catch (e) {
+    // If defineProperty fails, just assign it
+    window.AsyncStorage = AsyncStorage;
   }
   
-  // Also ensure it's available on globalThis with same properties
+  // Also ensure it's available on globalThis
   if (typeof globalThis !== 'undefined') {
-    Object.defineProperty(globalThis, 'AsyncStorage', {
-      value: AsyncStorage,
-      writable: false,
-      configurable: false,
-      enumerable: true
-    });
+    try {
+      Object.defineProperty(globalThis, 'AsyncStorage', {
+        value: AsyncStorage,
+        writable: true,
+        configurable: true,
+        enumerable: true
+      });
+    } catch (e) {
+      globalThis.AsyncStorage = AsyncStorage;
+    }
+  }
+  
+  // Create a module-like object for ES module imports
+  if (typeof window !== 'undefined') {
+    window.__ASYNC_STORAGE_MODULE__ = {
+      default: AsyncStorage,
+      AsyncStorage: AsyncStorage,
+      __esModule: true
+    };
   }
   
   console.log('✅ AsyncStorage polyfill preloaded');

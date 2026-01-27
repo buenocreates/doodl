@@ -2,8 +2,38 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
 
+// Plugin to replace AsyncStorage detection in Turnkey code
+const turnkeyAsyncStoragePlugin = () => {
+  return {
+    name: 'turnkey-async-storage-polyfill',
+    transform(code, id) {
+      // Replace Turnkey's AsyncStorage detection/require calls
+      if (id.includes('@turnkey') || id.includes('turnkey')) {
+        // Replace require('@react-native-async-storage/async-storage') with window.AsyncStorage
+        code = code.replace(
+          /require\(['"]@react-native-async-storage\/async-storage['"]\)/g,
+          '(typeof window !== "undefined" && window.AsyncStorage ? window.AsyncStorage : (() => { throw new Error("AsyncStorage not found"); })())'
+        );
+        
+        // Replace dynamic imports
+        code = code.replace(
+          /import\(['"]@react-native-async-storage\/async-storage['"]\)/g,
+          'Promise.resolve(typeof window !== "undefined" && window.AsyncStorage ? window.AsyncStorage : (() => { throw new Error("AsyncStorage not found"); })())'
+        );
+        
+        // Replace checks for AsyncStorage package
+        code = code.replace(
+          /try\s*\{[^}]*require\(['"]@react-native-async-storage\/async-storage['"]\)[^}]*\}\s*catch[^}]*throw\s+new\s+Error\(['"]Please\s+install\s+@react-native-async-storage/gi,
+          'if (typeof window === "undefined" || !window.AsyncStorage) { throw new Error("Please install @react-native-async-storage/async-storage in your app to use MobileStorageManager"); } const AsyncStorage = window.AsyncStorage;'
+        );
+      }
+      return { code, map: null };
+    }
+  };
+};
+
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), turnkeyAsyncStoragePlugin()],
   resolve: {
     alias: {
       // Map React Native async storage to our browser polyfill
@@ -15,7 +45,9 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     commonjsOptions: {
-      transformMixedEsModules: true
+      transformMixedEsModules: true,
+      // Ensure CommonJS modules can find AsyncStorage
+      include: [/node_modules/]
     },
     rollupOptions: {
       input: {
@@ -27,7 +59,20 @@ export default defineConfig({
         name: 'TurnkeyApp',
         globals: {
           '@react-native-async-storage/async-storage': 'AsyncStorage'
-        }
+        },
+        // Ensure AsyncStorage is available in the bundle
+        banner: `if (typeof window !== 'undefined' && !window.AsyncStorage) {
+          window.AsyncStorage = {
+            getItem: (k) => Promise.resolve(localStorage.getItem(k)),
+            setItem: (k, v) => Promise.resolve(localStorage.setItem(k, v)),
+            removeItem: (k) => Promise.resolve(localStorage.removeItem(k)),
+            clear: () => Promise.resolve(localStorage.clear()),
+            getAllKeys: () => Promise.resolve(Object.keys(localStorage)),
+            multiGet: (keys) => Promise.resolve(keys.map(k => [k, localStorage.getItem(k)])),
+            multiSet: (pairs) => { pairs.forEach(([k,v]) => localStorage.setItem(k,v)); return Promise.resolve(); },
+            multiRemove: (keys) => { keys.forEach(k => localStorage.removeItem(k)); return Promise.resolve(); }
+          };
+        }`
       },
       onwarn(warning, warn) {
         // Suppress warnings about Node.js crypto modules - they're handled by Turnkey
@@ -44,7 +89,9 @@ export default defineConfig({
   },
   define: {
     'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'production'),
-    '__DEV__': false
+    '__DEV__': false,
+    // Make AsyncStorage available as a global
+    'global.AsyncStorage': 'window.AsyncStorage'
   },
   optimizeDeps: {
     exclude: ['@react-native-async-storage/async-storage']
